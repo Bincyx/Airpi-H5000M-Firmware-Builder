@@ -18,6 +18,7 @@ fi
 cp -f "${firmware[@]}" "$output/"
 cp -f "$workspace/.config" "$output/build.config"
 cp -f "$workspace/.adguardhome-buildinfo" "$output/ADGUARDHOME-SOURCE.txt"
+cp -f "$workspace/.argon-buildinfo" "$output/ARGON-SOURCE.txt"
 
 (
   cd "$output"
