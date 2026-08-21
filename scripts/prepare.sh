@@ -2,7 +2,16 @@
 set -Eeuo pipefail
 
 workspace="${1:?source directory is required}"
+enable_adguardhome="${2:-true}"
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+case "$enable_adguardhome" in
+  true|false) ;;
+  *)
+    echo "ENABLE_ADGUARDHOME must be true or false." >&2
+    exit 1
+    ;;
+esac
 
 cd "$workspace"
 
@@ -99,11 +108,15 @@ install -m 0755 "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" \
   package/base-files/files/etc/uci-defaults/99-h5000m-zh-tw
 
 cat "$project_root/config/h5000m.config" > .config
+if [ "$enable_adguardhome" != 'true' ]; then
+  sed -i \
+    -e '/^CONFIG_PACKAGE_adguardhome=y$/d' \
+    -e '/^CONFIG_PACKAGE_luci-app-adguardhome=y$/d' \
+    .config
+fi
 make defconfig
 
 for required in \
-  'CONFIG_PACKAGE_adguardhome=y' \
-  'CONFIG_PACKAGE_luci-app-adguardhome=y' \
   'CONFIG_PACKAGE_luci-app-qmodem-next=y' \
   'CONFIG_PACKAGE_luci-ssl-openssl=y' \
   'CONFIG_WARP_VERSION="3_1"'; do
@@ -112,6 +125,20 @@ for required in \
     exit 1
   }
 done
+
+if [ "$enable_adguardhome" = 'true' ]; then
+  for required in \
+    'CONFIG_PACKAGE_adguardhome=y' \
+    'CONFIG_PACKAGE_luci-app-adguardhome=y'; do
+    grep -Fqx "$required" .config || {
+      echo "Required AdGuard Home setting is missing: $required" >&2
+      exit 1
+    }
+  done
+elif grep -Eq '^CONFIG_PACKAGE_(adguardhome|luci-app-adguardhome)=y$' .config; then
+  echo 'AdGuard Home was selected even though it was disabled.' >&2
+  exit 1
+fi
 
 for forbidden in \
   'CONFIG_PACKAGE_luci-app-modem=y' \
@@ -124,8 +151,12 @@ for forbidden in \
   fi
 done
 
-printf 'AdGuard Home: %s (pinned for Go 1.23 compatibility)\nLatest recipe observed: %s\nPackage recipe: openwrt/packages master\nLuCI source: openwrt/luci master\n' \
-  "$adguard_version" "$adguard_latest_version" > .adguardhome-buildinfo
+if [ "$enable_adguardhome" = 'true' ]; then
+  printf 'AdGuard Home: %s (pinned for Go 1.23 compatibility)\nLatest recipe observed: %s\nPackage recipe: openwrt/packages master\nLuCI source: openwrt/luci master\n' \
+    "$adguard_version" "$adguard_latest_version" > .adguardhome-buildinfo
+else
+  printf 'AdGuard Home: disabled by workflow input\n' > .adguardhome-buildinfo
+fi
 
 printf 'Argon theme source: jerrykuku/luci-theme-argon master\nArgon config: %s (modern master source, built as IPK; 0.9.x rejected)\n' \
   "$argon_config_version" > .argon-buildinfo
