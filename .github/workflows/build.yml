@@ -1,0 +1,95 @@
+name: 建置 H5000M 繁體中文韌體
+
+on:
+  workflow_dispatch:
+    inputs:
+      clean_build:
+        description: 忽略既有編譯快取
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    - cron: '0 20 * * 0'
+
+concurrency:
+  group: h5000m-firmware
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  SOURCE_REPOSITORY: https://github.com/padavanonly/immortalwrt-mt798x-6.6.git
+  SOURCE_BRANCH: mt798x-mt799x-6.6-mtwifi
+
+jobs:
+  build:
+    name: Hiveton H5000M
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    steps:
+      - name: 取出建置專案
+        uses: actions/checkout@v4
+
+      - name: 釋放磁碟空間
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost
+
+      - name: 安裝建置環境
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dos2unix python3-netifaces libfuse-dev
+          sudo bash -c 'bash <(curl -fsSL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+
+      - name: 取出上游原始碼
+        run: |
+          git clone --depth 1 --single-branch --branch "$SOURCE_BRANCH" "$SOURCE_REPOSITORY" .work/source
+          echo "SOURCE_COMMIT=$(git -C .work/source rev-parse --short=12 HEAD)" >> "$GITHUB_ENV"
+
+      - name: 還原下載與編譯快取
+        if: ${{ !inputs.clean_build }}
+        uses: actions/cache@v4
+        with:
+          path: |
+            .work/source/dl
+            .work/source/.ccache
+            .work/source/staging_dir/host*
+            .work/source/staging_dir/tool*
+          key: h5000m-${{ runner.os }}-${{ env.SOURCE_BRANCH }}-${{ env.SOURCE_COMMIT }}-${{ hashFiles('config/**', 'scripts/**', 'overlay/**') }}
+          restore-keys: |
+            h5000m-${{ runner.os }}-${{ env.SOURCE_BRANCH }}-
+
+      - name: 準備繁體中文設定
+        run: bash ./scripts/prepare.sh .work/source
+
+      - name: 下載套件原始碼
+        working-directory: .work/source
+        run: make download -j"$(nproc)"
+
+      - name: 建置韌體
+        working-directory: .work/source
+        run: make -j"$(nproc)" || make -j1 V=s
+
+      - name: 收集韌體與校驗檔
+        run: bash ./scripts/collect.sh .work/source .work/release
+
+      - name: 上傳建置產物
+        uses: actions/upload-artifact@v4
+        with:
+          name: H5000M-繁體中文-${{ env.SOURCE_COMMIT }}
+          path: .work/release/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: 發布 Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="h5000m-$(date -u +'%Y%m%d-%H%M')-${SOURCE_COMMIT}"
+          gh release create "$tag" .work/release/* \
+            --title "H5000M 繁體中文韌體 $(date -u +'%Y-%m-%d')" \
+            --notes "Hiveton / AirPi H5000M 繁體中文韌體。上游提交：${SOURCE_COMMIT}。刷寫前請核對 SHA256，並自行備份原廠韌體與設定。"
+
