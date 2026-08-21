@@ -1,53 +1,55 @@
-# AirPi H5000M 繁體中文韌體建置器
+# AirPi H5000M Firmware Builder
 
-這是一個獨立的 Hiveton／AirPi H5000M 雲端韌體建置專案。它會從 PadavanOnly 的 MT7987／MT7992 閉源 Wi-Fi 驅動分支取得原始碼，建置帶有繁體中文 LuCI、5G 數據機工具及 H5000M 常用功能的韌體。
+An independent cloud build project for the Hiveton / AirPi H5000M. It builds CloseWRT-based firmware from PadavanOnly's MT7987 / MT7992 branch with a Traditional Chinese LuCI interface, 5G modem tools, and practical H5000M packages.
 
-## 主要特色
+## Features
 
-- 管理介面預設為台灣繁體中文。
-- 時區預設為 `Asia/Taipei`。
-- 支援 QModem、MBIM、QMI 與常見 USB 5G 數據機。
-- 使用 ccache、下載快取及工具鏈快取縮短後續建置時間。
-- 每週一台灣時間凌晨 4 點自動建置，也可隨時手動執行。
-- 每次發布保留韌體、完整建置設定及 SHA256 校驗檔。
-- 不會自動刪除舊 Release，方便需要時回退。
+- Traditional Chinese (`zh_tw`) LuCI is enabled inside the firmware.
+- The firmware defaults to the `Asia/Taipei` timezone.
+- QModem, MBIM, QMI, and common USB 5G modem support.
+- Jerrykuku's Argon theme and Argon configuration app.
+- ccache, download cache, and host toolchain cache for faster rebuilds.
+- Weekly builds at 04:00 Monday in Taiwan, plus manual builds.
+- Every release includes firmware, the resolved build configuration, and SHA256 checksums.
+- Existing releases are retained for rollback.
 
-## 下載韌體
+## Download
 
-進入 GitHub 專案右側的 **Releases**，下載檔名含有 `h5000m` 的韌體。刷寫前請先核對 `SHA256SUMS`。
+Open **Releases** and download the firmware file containing `h5000m` in its name. Verify it against `SHA256SUMS` before flashing.
 
-## 手動建置
+## Run a manual build
 
-1. 開啟 GitHub 專案的 **Actions**。
-2. 選擇「建置 H5000M 繁體中文韌體」。
-3. 按下 **Run workflow**。
-4. 一般情況不要勾選「忽略既有編譯快取」。
+1. Open **Actions**.
+2. Select **Build H5000M firmware**.
+3. Select **Run workflow**.
+4. Leave **Ignore existing build cache** disabled for normal builds.
 
-第一次完整建置需要建立工具鏈與 ccache，因此時間較長；後續建置通常會明顯加快。
+The first build creates the toolchain and compiler cache. Later builds should be significantly faster.
 
-## 安全與刷機提醒
+## Safety
 
-- 本專案只負責自動化建置，不保證任何第三方韌體適用於所有硬體批次。
-- 刷機前務必備份原廠韌體、EEPROM、分割區及目前設定。
-- 請確認裝置型號確實是 Hiveton／AirPi H5000M。
-- 不建議在 Release 中公開預設管理密碼；首次登入後請立即設定高強度密碼。
-- 上游原始碼與附加套件各自適用其原有授權條款。
+- This project automates firmware builds and cannot guarantee compatibility with every hardware revision.
+- Back up the factory firmware, EEPROM, partitions, and configuration before flashing.
+- Confirm that the device is a Hiveton / AirPi H5000M.
+- Set a strong administrator password immediately after first login.
+- Upstream source code, drivers, themes, and packages retain their respective licenses.
 
-## 專案結構
+## Repository layout
 
 ```text
-.github/workflows/build.yml   GitHub Actions 建置與發布流程
-config/h5000m.config          可維護的最小韌體設定
-overlay/                      首次開機的繁體中文與時區設定
-scripts/prepare.sh            準備 feeds、主題與韌體設定
-scripts/collect.sh            收集產物並建立 SHA256 校驗檔
+.github/workflows/build.yml   GitHub Actions build and release workflow
+config/h5000m.config          Minimal maintainable firmware seed configuration
+overlay/                      First-boot Traditional Chinese and timezone defaults
+scripts/prepare.sh            Feed, theme, and configuration preparation
+scripts/collect.sh            Artifact collection and SHA256 generation
 ```
 
-## 上游來源
+## Upstream projects
 
 - [PadavanOnly ImmortalWrt MT798x](https://github.com/padavanonly/immortalwrt-mt798x-6.6)
 - [QModem](https://github.com/FUjr/QModem)
-- [Argon 主題](https://github.com/sbwml/luci-theme-argon)
+- [Jerrykuku Argon theme](https://github.com/jerrykuku/luci-theme-argon)
+- [Jerrykuku Argon configuration app](https://github.com/jerrykuku/luci-app-argon-config)
 
-本專案的建置腳本採用 MIT License；上游韌體原始碼、驅動程式與套件不因此改變授權。
+The automation in this repository is licensed under the MIT License. That license does not replace the licenses of any upstream firmware source, driver, theme, or package.
 
