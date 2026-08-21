@@ -42,14 +42,16 @@ grep -Fq "option config_file '/etc/adguardhome/adguardhome.yaml'" \
 grep -Fq "option work_dir '/var/lib/adguardhome'" \
   feeds/packages/net/adguardhome/files/adguardhome.conf
 
-# Use Jerrykuku's maintained Argon theme.  Keep luci-app-argon-config from
-# ImmortalWrt's own LuCI feed so it matches this 24.10 build and IPK ABI.
+# Use the maintained master sources and compile both packages inside this
+# ImmortalWrt 24.10 tree as IPKs.  The obsolete 18.06/0.9.x branch is excluded.
 find feeds/luci feeds/packages -maxdepth 3 -type d \
-  -name 'luci-theme-argon' \
+  \( -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
   -prune -exec rm -rf {} + 2>/dev/null || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 git clone --depth 1 --branch master \
   https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
+git clone --depth 1 --branch master \
+  https://github.com/jerrykuku/luci-app-argon-config.git package/luci-app-argon-config
 
 # The upstream master supports both APK and IPK.  This ImmortalWrt 24.10 tree
 # is IPK-only and does not provide the APK-only wget-any virtual package.
@@ -57,7 +59,7 @@ sed -i 's/^LUCI_DEPENDS:=.*/LUCI_DEPENDS:=+wget +jsonfilter/' \
   package/luci-theme-argon/Makefile
 
 # Never fall back to Jerrykuku's obsolete 18.06/0.9.x config package.
-argon_config_makefile='feeds/luci/applications/luci-app-argon-config/Makefile'
+argon_config_makefile='package/luci-app-argon-config/Makefile'
 test -f "$argon_config_makefile"
 argon_config_version="$(sed -n 's/^PKG_VERSION:=//p' \
   "$argon_config_makefile" | head -n 1)"
@@ -102,7 +104,7 @@ done
 printf 'AdGuard Home: %s\nPackage source: openwrt/packages master\nLuCI source: openwrt/luci master\n' \
   "$adguard_version" > .adguardhome-buildinfo
 
-printf 'Argon theme source: jerrykuku/luci-theme-argon master\nArgon config: %s (ImmortalWrt LuCI feed, built as IPK)\n' \
+printf 'Argon theme source: jerrykuku/luci-theme-argon master\nArgon config: %s (modern master source, built as IPK; 0.9.x rejected)\n' \
   "$argon_config_version" > .argon-buildinfo
 
 echo 'Build configuration is ready.'
