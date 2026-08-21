@@ -27,5 +27,11 @@ uci -q commit system
 uci -q commit wireless
 uci -q commit argon
 
+# Keep AdGuard Home installed but disabled until the user configures DNS.
+if [ -x /etc/init.d/adguardhome ]; then
+	/etc/init.d/adguardhome disable
+	/etc/init.d/adguardhome stop
+fi
+
 exit 0
 
