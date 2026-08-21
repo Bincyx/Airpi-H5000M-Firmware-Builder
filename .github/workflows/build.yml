@@ -9,7 +9,8 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '0 20 * * 0'
+    # Check the selected upstream branch daily at 04:00 Asia/Taipei.
+    - cron: '0 20 * * *'
 
 concurrency:
   group: h5000m-firmware
@@ -23,8 +24,39 @@ env:
   SOURCE_BRANCH: mt798x-mt799x-6.6-mtwifi
 
 jobs:
+  check-upstream:
+    name: Check upstream revision
+    runs-on: ubuntu-24.04
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      source_commit: ${{ steps.check.outputs.source_commit }}
+
+    steps:
+      - name: Compare upstream with successful releases
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source_sha="$(git ls-remote "$SOURCE_REPOSITORY" "refs/heads/$SOURCE_BRANCH" | cut -f1)"
+          test -n "$source_sha"
+          source_commit="${source_sha:0:12}"
+          echo "source_commit=$source_commit" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          elif gh release list --repo "$GITHUB_REPOSITORY" --limit 100 \
+            --json tagName --jq '.[].tagName' | grep -Fq -- "-$source_commit"; then
+            echo "Upstream $source_commit already has a successful release."
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Upstream $source_commit has no successful release yet."
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Hiveton H5000M
+    needs: check-upstream
+    if: needs.check-upstream.outputs.should_build == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 360
 
