@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-workspace="${1:?請提供上游原始碼目錄}"
+workspace="${1:?source directory is required}"
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$workspace"
@@ -10,13 +10,15 @@ cd "$workspace"
 ./scripts/feeds install -a
 ./scripts/feeds install -a -f -p qmodem
 
-# 使用最新版 Argon 主題；若上游已提供同名套件，先移除以避免重複定義。
+# Use Jerrykuku's maintained Argon theme and configuration app.
 find feeds/luci feeds/packages -maxdepth 3 -type d \
   \( -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
   -prune -exec rm -rf {} + 2>/dev/null || true
-rm -rf package/luci-theme-argon
-git clone --depth 1 --branch openwrt-24.10 \
-  https://github.com/sbwml/luci-theme-argon.git package/luci-theme-argon
+rm -rf package/luci-theme-argon package/luci-app-argon-config
+git clone --depth 1 --branch master \
+  https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
+git clone --depth 1 --branch master \
+  https://github.com/jerrykuku/luci-app-argon-config.git package/luci-app-argon-config
 
 install -d package/base-files/files/etc/uci-defaults
 install -m 0755 "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" \
@@ -25,5 +27,5 @@ install -m 0755 "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" \
 cat "$project_root/config/h5000m.config" > .config
 make defconfig
 
-echo '設定準備完成。'
+echo 'Build configuration is ready.'
 
