@@ -10,6 +10,36 @@ cd "$workspace"
 ./scripts/feeds install -a
 ./scripts/feeds install -a -f -p qmodem
 
+# Backport the current OpenWrt AdGuard Home package and LuCI integration.
+# The package recipe follows the latest stable upstream release and is rebuilt
+# by this ImmortalWrt tree as an IPK; the complete OpenWrt feeds are not mixed.
+adguard_sources="$(mktemp -d)"
+trap 'rm -rf "$adguard_sources"' EXIT
+
+git clone --depth 1 --filter=blob:none --sparse \
+  https://github.com/openwrt/packages.git "$adguard_sources/packages"
+git -C "$adguard_sources/packages" sparse-checkout set net/adguardhome
+
+git clone --depth 1 --filter=blob:none --sparse \
+  https://github.com/openwrt/luci.git "$adguard_sources/luci"
+git -C "$adguard_sources/luci" sparse-checkout set applications/luci-app-adguardhome
+
+adguard_version="$(sed -n 's/^PKG_VERSION:=//p' \
+  "$adguard_sources/packages/net/adguardhome/Makefile" | head -n 1)"
+test -n "$adguard_version"
+
+rm -rf feeds/packages/net/adguardhome feeds/luci/applications/luci-app-adguardhome
+cp -a "$adguard_sources/packages/net/adguardhome" feeds/packages/net/adguardhome
+cp -a "$adguard_sources/luci/applications/luci-app-adguardhome" \
+  feeds/luci/applications/luci-app-adguardhome
+./scripts/feeds install -f -p packages adguardhome
+./scripts/feeds install -f -p luci luci-app-adguardhome
+
+grep -Fq "option config_file '/etc/adguardhome/adguardhome.yaml'" \
+  feeds/packages/net/adguardhome/files/adguardhome.conf
+grep -Fq "option work_dir '/var/lib/adguardhome'" \
+  feeds/packages/net/adguardhome/files/adguardhome.conf
+
 # Use Jerrykuku's maintained Argon theme and configuration app.
 find feeds/luci feeds/packages -maxdepth 3 -type d \
   \( -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
@@ -26,6 +56,31 @@ install -m 0755 "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" \
 
 cat "$project_root/config/h5000m.config" > .config
 make defconfig
+
+for required in \
+  'CONFIG_PACKAGE_adguardhome=y' \
+  'CONFIG_PACKAGE_luci-app-adguardhome=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem-next=y' \
+  'CONFIG_PACKAGE_luci-ssl-openssl=y' \
+  'CONFIG_WARP_VERSION="3_1"'; do
+  grep -Fqx "$required" .config || {
+    echo "Required build setting is missing: $required" >&2
+    exit 1
+  }
+done
+
+for forbidden in \
+  'CONFIG_PACKAGE_luci-app-modem=y' \
+  'CONFIG_PACKAGE_libustream-mbedtls=y' \
+  'CONFIG_PACKAGE_libustream-mbedtls20201210=y'; do
+  if grep -Fqx "$forbidden" .config; then
+    echo "Conflicting build setting was selected: $forbidden" >&2
+    exit 1
+  fi
+done
+
+printf 'AdGuard Home: %s\nPackage source: openwrt/packages master\nLuCI source: openwrt/luci master\n' \
+  "$adguard_version" > .adguardhome-buildinfo
 
 echo 'Build configuration is ready.'
 
