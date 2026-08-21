@@ -12,7 +12,7 @@ on:
         description: Enable AdGuard Home and its LuCI app
         required: false
         type: boolean
-        default: true
+        default: false
   schedule:
     # Check the selected upstream branch daily at 04:00 Asia/Taipei.
     - cron: '0 20 * * *'
