@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# 首次開機時將管理介面、時區與主機名稱設為台灣繁體中文環境。
+uci -q set luci.main.lang='zh_tw'
+uci -q set system.@system[0].hostname='AirPi-H5000M'
+uci -q set system.@system[0].zonename='Asia/Taipei'
+uci -q set system.@system[0].timezone='CST-8'
+uci -q commit luci
+uci -q commit system
+
+exit 0
+
