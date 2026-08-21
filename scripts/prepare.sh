@@ -120,6 +120,10 @@ for required in \
   'CONFIG_PACKAGE_luci-app-qmodem-next=y' \
   'CONFIG_PACKAGE_qmodem=y' \
   'CONFIG_PACKAGE_ndisc6=y' \
+  'CONFIG_PACKAGE_kmod-mt7992=y' \
+  'CONFIG_PACKAGE_kmod-mt799a=y' \
+  'CONFIG_PACKAGE_kmod-mt_hwifi=y' \
+  'CONFIG_PACKAGE_kmod-mt_wifi7=y' \
   'CONFIG_PACKAGE_luci-ssl-openssl=y' \
   'CONFIG_WARP_VERSION="3_1"'; do
   grep -Fqx "$required" .config || {
