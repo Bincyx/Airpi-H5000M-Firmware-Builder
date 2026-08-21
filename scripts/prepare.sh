@@ -6,9 +6,19 @@ project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "$workspace"
 
+# QModem is not part of the standard ImmortalWrt 24.10 feeds.  Register its
+# official source before updating feeds so luci-app-qmodem-next is available.
+if ! grep -Eq '^src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf.default; then
+  printf '%s\n' 'src-git qmodem https://github.com/FUjr/QModem.git;main' >> feeds.conf.default
+fi
+
 ./scripts/feeds update -a
 ./scripts/feeds install -a
 ./scripts/feeds install -a -f -p qmodem
+test -f package/feeds/qmodem/luci-app-qmodem-next/Makefile || {
+  echo 'QModem feed did not install luci-app-qmodem-next.' >&2
+  exit 1
+}
 
 # Backport the current OpenWrt AdGuard Home package and LuCI integration.
 # The package recipe follows the latest stable upstream release and is rebuilt
