@@ -32,6 +32,8 @@ rm -rf feeds/packages/net/adguardhome feeds/luci/applications/luci-app-adguardho
 cp -a "$adguard_sources/packages/net/adguardhome" feeds/packages/net/adguardhome
 cp -a "$adguard_sources/luci/applications/luci-app-adguardhome" \
   feeds/luci/applications/luci-app-adguardhome
+./scripts/feeds update -i packages
+./scripts/feeds update -i luci
 ./scripts/feeds install -f -p packages adguardhome
 ./scripts/feeds install -f -p luci luci-app-adguardhome
 
