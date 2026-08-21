@@ -8,7 +8,7 @@ rm -rf "$output"
 mkdir -p "$output"
 
 mapfile -t firmware < <(find "$workspace/bin/targets" -type f \
-  \( -iname '*h5000m*' -o -name '*.manifest' -o -name 'sha256sums' -o -name '*.buildinfo' \))
+  \( -iname '*h5000m*' -o -name '*.manifest' -o -name '*.buildinfo' \))
 
 if (( ${#firmware[@]} == 0 )); then
   echo 'No H5000M firmware artifacts were found.' >&2
