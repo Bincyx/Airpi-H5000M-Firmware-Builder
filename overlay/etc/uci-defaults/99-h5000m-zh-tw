@@ -9,8 +9,8 @@ uci -q set system.@system[0].timezone='CST-8'
 
 # Match the requested dark Argon layout with a teal accent.
 uci -q set argon.@global[0].mode='dark'
-uci -q set argon.@global[0].primary='#31a1a1'
-uci -q set argon.@global[0].dark_primary='#31a1a1'
+uci -q set argon.@global[0].primary='#0F766E'
+uci -q set argon.@global[0].dark_primary='#0F766E'
 uci -q set argon.@global[0].blur='10'
 uci -q set argon.@global[0].blur_dark='10'
 uci -q set argon.@global[0].transparency='0.5'
