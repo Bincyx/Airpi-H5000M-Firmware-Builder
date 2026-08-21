@@ -118,6 +118,8 @@ make defconfig
 
 for required in \
   'CONFIG_PACKAGE_luci-app-qmodem-next=y' \
+  'CONFIG_PACKAGE_qmodem=y' \
+  'CONFIG_PACKAGE_ndisc6=y' \
   'CONFIG_PACKAGE_luci-ssl-openssl=y' \
   'CONFIG_WARP_VERSION="3_1"'; do
   grep -Fqx "$required" .config || {
@@ -143,6 +145,10 @@ fi
 for forbidden in \
   'CONFIG_PACKAGE_luci-app-modem=y' \
   'CONFIG_PACKAGE_luci-app-qmodem=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem-sms=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem-mwan=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem-ttl=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem-hc=y' \
   'CONFIG_PACKAGE_libustream-mbedtls=y' \
   'CONFIG_PACKAGE_libustream-mbedtls20201210=y'; do
   if grep -Fqx "$forbidden" .config; then
