@@ -25,7 +25,7 @@ permissions:
   contents: write
 
 env:
-  SOURCE_REPOSITORY: https://github.com/padavanonly/immortalwrt-mt798x-6.6.git
+  SOURCE_REPOSITORY: https://github.com/padavanonly/immortalwrt-mt798x-24.10.git
   SOURCE_BRANCH: mt798x-mt799x-6.6-mtwifi
 
 jobs:
