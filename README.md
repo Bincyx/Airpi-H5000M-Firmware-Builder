@@ -48,7 +48,6 @@ scripts/collect.sh            Artifact collection and SHA256 generation
 
 - [PadavanOnly ImmortalWrt MT798x](https://github.com/padavanonly/immortalwrt-mt798x-6.6)
 - [QModem](https://github.com/FUjr/QModem)
-- [Jerrykuku Argon theme](https://github.com/jerrykuku/luci-theme-argon)
 
 The automation in this repository is licensed under the MIT License. That license does not replace the licenses of any upstream firmware source, driver, theme, or package.
 
