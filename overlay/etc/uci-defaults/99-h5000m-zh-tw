@@ -7,6 +7,10 @@ uci -q set system.@system[0].hostname='AirPi-H5000M'
 uci -q set system.@system[0].zonename='Asia/Taipei'
 uci -q set system.@system[0].timezone='CST-8'
 
+# Set custom LAN IP
+uci -q set network.lan.ipaddr='192.168.1.1'
+uci -q commit network
+
 # Apply the requested US wireless regulatory domain to existing radios.
 for radio in radio0 radio1; do
 	if uci -q get "wireless.${radio}" >/dev/null; then
