@@ -29,6 +29,8 @@ test -f package/feeds/qmodem/luci-app-qmodem-next/Makefile || {
   exit 1
 }
 
+rm -rf package/mtk/applications/5g-modem
+
 # Backport the current OpenWrt AdGuard Home package and LuCI integration.
 # The package recipe follows the latest stable upstream release and is rebuilt
 # by this ImmortalWrt tree as an IPK; the complete OpenWrt feeds are not mixed.
