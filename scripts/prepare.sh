@@ -195,4 +195,3 @@ printf 'Argon theme source: sbwml/luci-theme-argon\nArgon config: %s (sbwml sour
 echo 'Build configuration is ready.'
 
 mkdir -p overlay/etc/uci-defaults/ && chmod -R +x overlay/etc/uci-defaults/
-echo "option force_overwrite 1" >> .config
