@@ -81,8 +81,8 @@ find feeds/luci feeds/packages -maxdepth 3 -type d \
   -prune -exec rm -rf {} + 2>/dev/null || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 
-# Switch theme source to sbwml's repository while keeping argon-config from upstream
-git clone --depth 1 --branch master \
+# Switch theme source to sbwml's repository (use default branch) while keeping argon-config from upstream
+git clone --depth 1 \
   https://github.com/sbwml/luci-theme-argon.git package/luci-theme-argon
 git clone --depth 1 --branch master \
   https://github.com/jerrykuku/luci-app-argon-config.git package/luci-app-argon-config
@@ -136,7 +136,7 @@ for required in \
   }
 done
 
-if [ "$enable_adguardhome" = 'true' ]; then
+if [ "$enable_adguardhome" = 'true' ]; me
   for required in \
     'CONFIG_PACKAGE_adguardhome=y' \
     'CONFIG_PACKAGE_luci-app-adguardhome=y'; do
@@ -172,7 +172,7 @@ else
   printf 'AdGuard Home: disabled by workflow input\n' > .adguardhome-buildinfo
 fi
 
-printf 'Argon theme source: sbwml/luci-theme-argon master\nArgon config: %s (modern master source, built as IPK; 0.9.x rejected)\n' \
+printf 'Argon theme source: sbwml/luci-theme-argon default branch\nArgon config: %s (modern master source, built as IPK; 0.9.x rejected)\n' \
   "$argon_config_version" > .argon-buildinfo
 
 echo 'Build configuration is ready.'
