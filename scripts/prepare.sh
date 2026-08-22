@@ -105,6 +105,40 @@ case "$argon_config_version" in
     ;;
 esac
 
+# Validate argon-config package
+argon_config_makefile='package/luci-app-argon-config/Makefile'
+test -f "$argon_config_makefile"
+argon_config_version="$(sed -n 's/^PKG_VERSION:=//p' \
+  "$argon_config_makefile" | head -n 1)"
+test -n "$argon_config_version"
+case "$argon_config_version" in
+  0.9*)
+    echo "Obsolete luci-app-argon-config was selected: $argon_config_version" >&2
+    exit 1
+    ;;
+esac
+
+# 追加自訂 CSS：將 Argon 圖示與面板恢復為經典長條/矩形外觀
+argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
+if [ -f "$argon_css" ]; then
+    cat << 'EOF' >> "$argon_css"
+
+/* Restore rectangle/card style icons */
+.main-left .nav .slide .menu img,
+.main-left .nav .slide .menu i,
+.argon-config-icon {
+    border-radius: 6px !important;
+    clip-path: none !important;
+    width: auto !important;
+}
+EOF
+fi
+
+# 正確複製自訂 uci-defaults 到 OpenWrt 的 files 目錄
+mkdir -p files/etc/uci-defaults
+cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
+chmod +x files/etc/uci-defaults/99-h5000m-zh-tw
+
 mkdir -p files/etc/uci-defaults
 cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
 chmod +x files/etc/uci-defaults/99-h5000m-zh-tw
