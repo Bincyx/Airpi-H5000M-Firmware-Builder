@@ -83,7 +83,7 @@ jobs:
 
       - name: Clone upstream source
         run: |
-          git clone --depth 1 --single-branch --branch "$SOURCE_BRANCH" "$SOURCE_REPOSITORY" .work/source
+          git clone -q --depth 1 --single-branch --branch "$SOURCE_BRANCH" "$SOURCE_REPOSITORY" .work/source
           echo "SOURCE_COMMIT=$(git -C .work/source rev-parse --short=12 HEAD)" >> "$GITHUB_ENV"
 
       - name: Restore download and build caches
@@ -106,11 +106,20 @@ jobs:
 
       - name: Download package sources
         working-directory: .work/source
-        run: make download -j"$(nproc)"
+        run: |
+          echo "::group::Downloading package sources"
+          make download -j"$(nproc)" >/dev/null 2>&1 || make download -j"$(nproc)"
+          echo "::endgroup::"
 
       - name: Build firmware
         working-directory: .work/source
-        run: make -j"$(nproc)" || make -j1 V=s
+        run: |
+          echo "Building firmware... (Logs are being buffered to avoid log truncation)"
+          make -j"$(nproc)" > build.log 2>&1 || {
+            echo "=== Build Failed! Showing last 200 lines of log ==="
+            tail -n 200 build.log
+            exit 1
+          }
 
       - name: Collect firmware and checksums
         run: bash ./scripts/collect.sh .work/source .work/release
@@ -131,4 +140,3 @@ jobs:
           gh release create "$tag" .work/release/* \
             --title "H5000M firmware $(date -u +'%Y-%m-%d')" \
             --notes "Hiveton / AirPi H5000M firmware with Traditional Chinese LuCI. Upstream commit: ${SOURCE_COMMIT}. Verify SHA256 checksums and back up the factory firmware and configuration before flashing."
-
