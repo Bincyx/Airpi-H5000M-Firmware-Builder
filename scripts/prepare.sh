@@ -15,6 +15,8 @@ esac
 
 cd "$workspace"
 
+rm -f .config
+
 # QModem is not part of the standard ImmortalWrt 24.10 feeds. Register its
 # official source before updating feeds so luci-app-qmodem-next is available.
 if ! grep -Eq '^src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf.default; then
