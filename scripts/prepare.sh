@@ -15,7 +15,7 @@ esac
 
 cd "$workspace"
 
-# QModem is not part of the standard ImmortalWrt 24.10 feeds.  Register its
+# QModem is not part of the standard ImmortalWrt 24.10 feeds. Register its
 # official source before updating feeds so luci-app-qmodem-next is available.
 if ! grep -Eq '^src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf.default; then
   printf '%s\n' 'src-git qmodem https://github.com/FUjr/QModem.git;main' >> feeds.conf.default
@@ -47,7 +47,7 @@ adguard_latest_version="$(sed -n 's/^PKG_VERSION:=//p' \
   "$adguard_sources/packages/net/adguardhome/Makefile" | head -n 1)"
 test -n "$adguard_latest_version"
 
-# ImmortalWrt 24.10 currently provides Go 1.23.x.  AdGuard Home 0.107.57 is
+# ImmortalWrt 24.10 currently provides Go 1.23.x. AdGuard Home 0.107.57 is
 # the final stable release using Go 1.23; 0.107.58 and later require Go 1.24+.
 adguard_version='0.107.57'
 adguard_source_hash='9df951486dab0e83485b596c0393f91d4ff2994de26101b43af8344efb7c1536'
@@ -74,25 +74,25 @@ grep -Fq "option config_file '/etc/adguardhome/adguardhome.yaml'" \
 grep -Fq "option work_dir '/var/lib/adguardhome'" \
   feeds/packages/net/adguardhome/files/adguardhome.conf
 
-# Use the maintained master sources and compile both packages inside this
-# ImmortalWrt 24.10 tree as IPKs.  The obsolete 18.06/0.9.x branch is excluded.
+# Clean up obsolete theme and config packages from feeds and package tree
 find feeds/luci feeds/packages -maxdepth 3 -type d \
   \( -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
   -prune -exec rm -rf {} + 2>/dev/null || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 
-# Switch theme source to sbwml's repository (use default branch) while keeping argon-config from upstream
-git clone --depth 1 \
-  https://github.com/sbwml/luci-theme-argon.git package/luci-theme-argon
-git clone --depth 1 --branch master \
-  https://github.com/jerrykuku/luci-app-argon-config.git package/luci-app-argon-config
+# Fetch both theme and config directly from sbwml's repository
+argon_tmp="$(mktemp -d)"
+git clone --depth 1 https://github.com/sbwml/luci-theme-argon.git "$argon_tmp"
+mv "$argon_tmp/luci-theme-argon" package/luci-theme-argon
+mv "$argon_tmp/luci-app-argon-config" package/luci-app-argon-config
+rm -rf "$argon_tmp"
 
-# The upstream master supports both APK and IPK.  This ImmortalWrt 24.10 tree
+# The upstream supports both APK and IPK. This ImmortalWrt 24.10 tree
 # is IPK-only and does not provide the APK-only wget-any virtual package.
 sed -i 's/^LUCI_DEPENDS:=.*/LUCI_DEPENDS:=+wget +jsonfilter/' \
   package/luci-theme-argon/Makefile
 
-# Never fall back to Jerrykuku's obsolete 18.06/0.9.x config package.
+# Validate argon-config package
 argon_config_makefile='package/luci-app-argon-config/Makefile'
 test -f "$argon_config_makefile"
 argon_config_version="$(sed -n 's/^PKG_VERSION:=//p' \
@@ -136,7 +136,7 @@ for required in \
   }
 done
 
-if [ "$enable_adguardhome" = 'true' ]; me
+if [ "$enable_adguardhome" = 'true' ]; then
   for required in \
     'CONFIG_PACKAGE_adguardhome=y' \
     'CONFIG_PACKAGE_luci-app-adguardhome=y'; do
@@ -172,7 +172,7 @@ else
   printf 'AdGuard Home: disabled by workflow input\n' > .adguardhome-buildinfo
 fi
 
-printf 'Argon theme source: sbwml/luci-theme-argon default branch\nArgon config: %s (modern master source, built as IPK; 0.9.x rejected)\n' \
+printf 'Argon theme source: sbwml/luci-theme-argon\nArgon config: %s (sbwml source, built as IPK; 0.9.x rejected)\n' \
   "$argon_config_version" > .argon-buildinfo
 
 echo 'Build configuration is ready.'
