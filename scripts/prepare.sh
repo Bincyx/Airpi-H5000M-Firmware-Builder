@@ -105,9 +105,9 @@ case "$argon_config_version" in
     ;;
 esac
 
-install -d package/base-files/files/etc/uci-defaults
-install -m 0755 "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" \
-  package/base-files/files/etc/uci-defaults/99-h5000m-zh-tw
+mkdir -p files/etc/uci-defaults
+cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
+chmod +x files/etc/uci-defaults/99-h5000m-zh-tw
 
 curl -sSL "https://raw.githubusercontent.com/padavanonly/immortalwrt-mt798x-6.6/mt798x-mt799x-6.6-mtwifi/defconfig/mt7987_mt7992.config" > .config
 cat "$project_root/config/h5000m.config" >> .config
