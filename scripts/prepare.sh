@@ -107,7 +107,8 @@ install -d package/base-files/files/etc/uci-defaults
 install -m 0755 "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" \
   package/base-files/files/etc/uci-defaults/99-h5000m-zh-tw
 
-cat "$project_root/defconfig/mt7987_mt7992.config" "$project_root/config/h5000m.config" > .config
+curl -sSL "https://raw.githubusercontent.com/padavanonly/immortalwrt-mt798x-6.6/mt798x-mt799x-6.6-mtwifi/defconfig/mt7987_mt7992.config" > .config
+cat "$project_root/config/h5000m.config" >> .config
 
 if [ "$enable_adguardhome" != 'true' ]; then
   sed -i \
