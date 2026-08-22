@@ -175,3 +175,4 @@ printf 'Argon theme source: jerrykuku/luci-theme-argon master\nArgon config: %s 
 
 echo 'Build configuration is ready.'
 
+chmod -R +x overlay/etc/uci-defaults/
