@@ -62,7 +62,7 @@ jobs:
     name: Hiveton H5000M
     needs: check-upstream
     if: needs.check-upstream.outputs.should_build == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 360
 
     steps:
