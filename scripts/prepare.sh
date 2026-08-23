@@ -104,30 +104,36 @@ case "$argon_config_version" in
     ;;
 esac
 
-# 1. 注入 CSS 全局規則：強行禁止所有 clip-path 並鎖定圖示/卡片為矩形長條
+# 1. 全局 CSS 修飾：將所有 LuCI / Argon 頁面中的進度條強制轉為長條型 (橫向 Bar)，並隱藏 SVG 圓環
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
 
-/* Force disable circle clipping globally for all menu icons, images, and components */
-img, i, .menu img, .menu i, .argon-config-icon, [style*="clip-path"] {
-    clip-path: none !important;
-    -webkit-clip-path: none !important;
-    border-radius: 6px !important;
-}
-
-/* Force horizontal bar style for progress elements */
-.cbi-progressbar, .progress, [class*="progressbar"] {
+/* Force all progressbar containers in LuCI to render as rectangular bar track */
+.cbi-progressbar,
+.progress,
+[class*="progressbar"],
+[class*="progress-bar"],
+div.cbi-progressbar {
     border-radius: 4px !important;
     clip-path: none !important;
     -webkit-clip-path: none !important;
     height: 12px !important;
     width: 100% !important;
-    max-width: 200px !important;
+    min-width: 120px !important;
+    max-width: 240px !important;
+    margin: 6px 0 !important;
     background-color: rgba(255, 255, 255, 0.15) !important;
+    display: inline-block !important;
+    position: relative !important;
+    overflow: hidden !important;
 }
 
-.cbi-progressbar > div, .progress > .progress-bar {
+/* Internal filling bar styling */
+.cbi-progressbar > div,
+.progress > .progress-bar,
+[class*="progressbar"] > div,
+[class*="progress-bar"] > div {
     border-radius: 4px !important;
     height: 100% !important;
     background-color: #0F766E !important;
@@ -135,22 +141,16 @@ img, i, .menu img, .menu i, .argon-config-icon, [style*="clip-path"] {
     -webkit-clip-path: none !important;
 }
 
-.cbi-progressbar svg, .progress svg {
+/* Completely hide round SVG meters inserted by JS/LuCI */
+.cbi-progressbar svg,
+.progress svg,
+[class*="progressbar"] svg {
     display: none !important;
 }
 EOF
 fi
 
-# 2. 徹底閹割 JS 中的圖示圓形化邏輯（源頭堵絕）
-ARGON_JS="package/luci-theme-argon/htdocs/luci-static/argon/js/script.js"
-if [ -f "$ARGON_JS" ]; then
-    # 將動態設圖示為圓形的關鍵 JS 函式改寫為空函式，防止背景或重新整理時重新計算
-    sed -i 's/function setMenuIcon([^)]*){[^}]*}/function setMenuIcon(){return;}/g' "$ARGON_JS" || true
-    # 移除任何剩餘的 clip-path 行內樣式寫入動作
-    sed -i 's/clip-path:[^;]*;//g' "$ARGON_JS"
-fi
-
-# 3. 修正 UCI 預設配置，鎖定主題色調為 #0F766E
+# 2. 修改預設 UCI 配置：鎖定 Argon 主色調為 #0F766E
 ARGON_UCI_CONFIG="package/luci-app-argon-config/root/etc/config/argon"
 if [ -f "$ARGON_UCI_CONFIG" ]; then
     sed -i "s/primary.*/primary '#0F766E'/" "$ARGON_UCI_CONFIG"
@@ -158,7 +158,7 @@ if [ -f "$ARGON_UCI_CONFIG" ]; then
     sed -i "s/bing.*/bing '1'/" "$ARGON_UCI_CONFIG"
 fi
 
-# 4. 建立 files 並覆蓋腳本與賦予權限
+# 3. 建立 files 檔案結構並覆蓋 uci-defaults 腳本
 mkdir -p files/etc/uci-defaults
 if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
     cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
