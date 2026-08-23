@@ -104,33 +104,45 @@ case "$argon_config_version" in
     ;;
 esac
 
-# 1. Convert dashboard circle progress charts into horizontal bar style
+# 1. Global Rule: Convert ALL LuCI progress bars across all pages into horizontal bar style
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
 
-/* Force dashboard progress elements to render as horizontal bars instead of circles */
-.main-right .cbi-progressbar,
-.main-right .progress,
-.node-main .cbi-progressbar,
-.node-main .progress {
+/* Globally force all progress elements across all LuCI interfaces to render as horizontal bars */
+.cbi-progressbar,
+.progress,
+[class*="progressbar"],
+[class*="progress-bar"] {
     border-radius: 4px !important;
     clip-path: none !important;
     -webkit-clip-path: none !important;
     height: 12px !important;
     width: 100% !important;
-    max-width: 180px !important;
+    max-width: 200px !important;
     margin: 8px auto !important;
     background-color: rgba(255, 255, 255, 0.15) !important;
+    display: inline-block !important;
+    position: relative !important;
+    overflow: hidden !important;
 }
 
-.main-right .cbi-progressbar > div,
-.main-right .progress > .progress-bar,
-.node-main .cbi-progressbar > div,
-.node-main .progress > .progress-bar {
+/* Internal filled bar styling */
+.cbi-progressbar > div,
+.progress > .progress-bar,
+[class*="progressbar"] > div,
+[class*="progress-bar"] > div {
     border-radius: 4px !important;
     height: 100% !important;
     background-color: #0F766E !important;
+    clip-path: none !important;
+    -webkit-clip-path: none !important;
+}
+
+/* Hide/flatten any SVG circles rendered inside progress elements */
+.cbi-progressbar svg,
+.progress svg {
+    display: none !important;
 }
 EOF
 fi
@@ -187,7 +199,7 @@ if [ "$enable_adguardhome" = 'true' ]; then
     }
   done
 elif grep -Eq '^CONFIG_PACKAGE_(adguardhome|luci-app-adguardhome)=y$' .config; then
-  echo 'AdGuard Home was selected even though it was disabled.' >&2
+  echo 'AdGuard Home me was selected even though it was disabled.' >&2
   exit 1
 fi
 
