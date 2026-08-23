@@ -104,17 +104,19 @@ case "$argon_config_version" in
     ;;
 esac
 
-# 1. Inject custom CSS rules for rectangular/card menu and icons
+# 1. Inject CSS rules strictly targeted at sidebar menu icons, overriding JS inline styles
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
 
-/* Restore rectangle/card style icons */
+/* Force remove clip-path injected by JS specifically for sidebar icons */
 .main-left .nav .slide .menu img,
+.main-left .nav .slide .menu img[style*="clip-path"],
 .main-left .nav .slide .menu i,
-.argon-config-icon {
+.main-left .nav .slide .menu i[style*="clip-path"] {
     border-radius: 6px !important;
     clip-path: none !important;
+    -webkit-clip-path: none !important;
     width: auto !important;
 }
 EOF
@@ -128,13 +130,7 @@ if [ -f "$ARGON_UCI_CONFIG" ]; then
     sed -i "s/bing.*/bing '1'/" "$ARGON_UCI_CONFIG"
 fi
 
-# 3. Safely strip dynamic clip-path attributes from JavaScript
-ARGON_JS="package/luci-theme-argon/htdocs/luci-static/argon/js/script.js"
-if [ -f "$ARGON_JS" ]; then
-    sed -i 's/clip-path:[^;]*;//g' "$ARGON_JS"
-fi
-
-# 4. Create target directory, copy custom uci-defaults, and grant permissions
+# 3. Create target directory, copy custom uci-defaults, and grant permissions
 mkdir -p files/etc/uci-defaults
 if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
     cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
