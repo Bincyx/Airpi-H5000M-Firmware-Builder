@@ -124,6 +124,13 @@ if [ -f "$argon_css" ]; then
 EOF
 fi
 
+ARGON_UCI_CONFIG="package/luci-app-argon-config/root/etc/config/argon"
+if [ -f "$ARGON_UCI_CONFIG" ]; then
+    sed -i "s/option primary '.*/option primary '#31a1a1'/" "$ARGON_UCI_CONFIG"
+    sed -i "s/option transparency '.*/option transparency '0.5'/" "$ARGON_UCI_CONFIG"
+    sed -i "s/option bing '.*/option bing '1'/" "$ARGON_UCI_CONFIG"
+fi
+
 mkdir -p files/etc/uci-defaults
 cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
 chmod +x files/etc/uci-defaults/99-h5000m-zh-tw
