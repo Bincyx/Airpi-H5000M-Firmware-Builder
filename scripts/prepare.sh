@@ -77,7 +77,7 @@ grep -Fq "option work_dir '/var/lib/adguardhome'" \
 # Clean up obsolete theme and config packages from feeds and package tree
 find feeds/luci feeds/packages -maxdepth 3 -type d \
   \( -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
-  -prune -exec rm -rf {} + 2>/dev/null || true
+  -prune -exec rm -rf {} + 2>/devnull || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 
 # Fetch both theme and config directly from sbwml's repository
@@ -104,53 +104,7 @@ case "$argon_config_version" in
     ;;
 esac
 
-# 1. 全局 CSS 修飾：將所有 LuCI / Argon 頁面中的進度條強制轉為長條型 (橫向 Bar)，並隱藏 SVG 圓環
-argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
-if [ -f "$argon_css" ]; then
-    cat << 'EOF' >> "$argon_css"
-
-/* Force all progressbar containers in LuCI to render as rectangular bar track */
-.cbi-progressbar,
-.progress,
-[class*="progressbar"],
-[class*="progress-bar"],
-div.cbi-progressbar {
-    border-radius: 4px !important;
-    clip-path: none !important;
-    -webkit-clip-path: none !important;
-    height: 12px !important;
-    width: 100% !important;
-    min-width: 120px !important;
-    max-width: 240px !important;
-    margin: 6px 0 !important;
-    background-color: rgba(255, 255, 255, 0.15) !important;
-    display: inline-block !important;
-    position: relative !important;
-    overflow: hidden !important;
-}
-
-/* Internal filling bar styling */
-.cbi-progressbar > div,
-.progress > .progress-bar,
-[class*="progressbar"] > div,
-[class*="progress-bar"] > div {
-    border-radius: 4px !important;
-    height: 100% !important;
-    background-color: #0F766E !important;
-    clip-path: none !important;
-    -webkit-clip-path: none !important;
-}
-
-/* Completely hide round SVG meters inserted by JS/LuCI */
-.cbi-progressbar svg,
-.progress svg,
-[class*="progressbar"] svg {
-    display: none !important;
-}
-EOF
-fi
-
-# 2. 修改預設 UCI 配置：鎖定 Argon 主色調為 #0F766E
+# 1. 修改預設 UCI 配置：預設主題色設為 #0F766E
 ARGON_UCI_CONFIG="package/luci-app-argon-config/root/etc/config/argon"
 if [ -f "$ARGON_UCI_CONFIG" ]; then
     sed -i "s/primary.*/primary '#0F766E'/" "$ARGON_UCI_CONFIG"
@@ -158,7 +112,7 @@ if [ -f "$ARGON_UCI_CONFIG" ]; then
     sed -i "s/bing.*/bing '1'/" "$ARGON_UCI_CONFIG"
 fi
 
-# 3. 建立 files 檔案結構並覆蓋 uci-defaults 腳本
+# 2. 建立 files 檔案結構並覆蓋 uci-defaults 腳本
 mkdir -p files/etc/uci-defaults
 if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
     cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
@@ -220,6 +174,84 @@ for forbidden in \
     exit 1
   fi
 done
+
+# 3. 注入 CSS 規則：置於最後一步，長條膠囊樣式 + 色彩與 Argon 主題變數連動
+argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
+if [ -f "$argon_css" ]; then
+    cat << 'EOF' >> "$argon_css"
+
+/* 隱藏 Argon 強行插入的圓環與動態 SVG 圖表 */
+.cbi-progressbar svg,
+.progress svg,
+.cbi-progressbar-pie svg,
+svg.pie {
+    display: none !important;
+}
+
+/* 全域進度條與連線總數 (conncount) 外框，統一改為膠囊長條 */
+.cbi-progressbar,
+.progress,
+.cbi-progressbar-pie,
+[id*="conn"] .cbi-progressbar,
+div[class*="progressbar"] {
+    position: relative !important;
+    height: 18px !important;
+    line-height: 18px !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 9px !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    margin: 4px 0 !important;
+}
+
+/* 內部進度填充：自動跟隨 Argon 主題設定的主色 (Primary Color) */
+.cbi-progressbar > div,
+.progress > .progress-bar,
+.cbi-progressbar-pie > div,
+div[class*="progressbar"] > div {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100% !important;
+    background-color: var(--primary-color, #0F766E) !important;
+    border-radius: 8px !important;
+    transition: width 0.3s ease !important;
+    z-index: 1 !important;
+}
+
+/* 數值文字層（如數據 (-64/-44dBm) 或連線數，絕對居中浮於進度條最上層） */
+.cbi-progressbar > div + div,
+.cbi-progressbar small,
+.cbi-progressbar span,
+.cbi-progressbar-pie small,
+.cbi-progressbar-pie span,
+.progress span {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    z-index: 2 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* 保護網路連接埠卡片 (eth0 / eth1) 視覺結構，不受長條化影響 */
+.network-status-table .cbi-progressbar,
+[class*="port"] .cbi-progressbar {
+    border: none !important;
+    background: transparent !important;
+    height: auto !important;
+}
+EOF
+fi
 
 if [ "$enable_adguardhome" = 'true' ]; then
   printf 'AdGuard Home: %s (pinned for Go 1.23 compatibility)\nLatest recipe observed: %s\nPackage recipe: openwrt/packages master\nLuCI source: openwrt/luci master\n' \
