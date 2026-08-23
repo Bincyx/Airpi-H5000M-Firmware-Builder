@@ -77,7 +77,7 @@ grep -Fq "option work_dir '/var/lib/adguardhome'" \
 # Clean up obsolete theme and config packages from feeds and package tree
 find feeds/luci feeds/packages -maxdepth 3 -type d \
   \( -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
-  -prune -exec rm -rf {} + 2>/devnull || true
+  -prune -exec rm -rf {} + 2>/dev/null || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 
 # Fetch both theme and config directly from sbwml's repository
@@ -104,7 +104,7 @@ case "$argon_config_version" in
     ;;
 esac
 
-# 1. 直接覆寫/修正 sbwml 原生的 UCI 設定檔，確保 100% 保留 sbwml 結構並預設主色為 #0F766E
+# 1. 直接建立 sbwml 原生的 UCI 設定檔，確保預設顏色為 #0F766E 且結構完整
 mkdir -p files/etc/config
 cat << 'EOF' > files/etc/config/argon
 config global
@@ -116,7 +116,7 @@ config global
 	option bing '1'
 EOF
 
-# 2. 建立 files 檔案結構並處理 uci-defaults 腳本
+# 2. 建立 files 檔案結構並複製 overlay 腳本
 mkdir -p files/etc/uci-defaults
 if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
     cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
@@ -150,7 +150,7 @@ for required in \
   }
 done
 
-if [ "$enable_adguardhome" = 'true' ]; me
+if [ "$enable_adguardhome" = 'true' ]; then
   for required in \
     'CONFIG_PACKAGE_adguardhome=y' \
     'CONFIG_PACKAGE_luci-app-adguardhome=y'; do
@@ -179,7 +179,7 @@ for forbidden in \
   fi
 done
 
-# 3. 注入 CSS 規則：長條膠囊樣式（置於最後一步，純追加 CSS，絕對不破壞 Argon 主題背景）
+# 3. 注入 CSS 規則：長條膠囊樣式
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
