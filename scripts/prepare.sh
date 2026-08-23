@@ -34,8 +34,6 @@ test -f package/feeds/qmodem/luci-app-qmodem-next/Makefile || {
 rm -rf package/mtk/applications/5g-modem
 
 # Backport the current OpenWrt AdGuard Home package and LuCI integration.
-# The package recipe follows the latest stable upstream release and is rebuilt
-# by this ImmortalWrt tree as an IPK; the complete OpenWrt feeds are not mixed.
 adguard_sources="$(mktemp -d)"
 trap 'rm -rf "$adguard_sources"' EXIT
 
@@ -51,8 +49,6 @@ adguard_latest_version="$(sed -n 's/^PKG_VERSION:=//p' \
   "$adguard_sources/packages/net/adguardhome/Makefile" | head -n 1)"
 test -n "$adguard_latest_version"
 
-# ImmortalWrt 24.10 currently provides Go 1.23.x. AdGuard Home 0.107.57 is
-# the final stable release using Go 1.23; 0.107.58 and later require Go 1.24+.
 adguard_version='0.107.57'
 adguard_source_hash='9df951486dab0e83485b596c0393f91d4ff2994de26101b43af8344efb7c1536'
 adguard_frontend_hash='fc0b57d80dece4219bfba833b48122ffe7a140ee2026cd3cf4c7181ccdcf8c9e'
@@ -91,8 +87,7 @@ mv "$argon_tmp/luci-theme-argon" package/luci-theme-argon
 mv "$argon_tmp/luci-app-argon-config" package/luci-app-argon-config
 rm -rf "$argon_tmp"
 
-# The upstream supports both APK and IPK. This ImmortalWrt 24.10 tree
-# is IPK-only and does not provide the APK-only wget-any virtual package.
+# The upstream supports both APK and IPK.
 sed -i 's/^LUCI_DEPENDS:=.*/LUCI_DEPENDS:=+wget +jsonfilter/' \
   package/luci-theme-argon/Makefile
 
@@ -126,19 +121,21 @@ fi
 
 ARGON_UCI_CONFIG="package/luci-app-argon-config/root/etc/config/argon"
 if [ -f "$ARGON_UCI_CONFIG" ]; then
-    sed -i "s/option primary .*/option primary '#31a1a1'/" "$ARGON_UCI_CONFIG"
-    sed -i "s/option transparency .*/option transparency '0.5'/" "$ARGON_UCI_CONFIG"
-    sed -i "s/option bing .*/option bing '1'/" "$ARGON_UCI_CONFIG"
+    sed -i "s/primary.*/primary '#0F766E'/" "$ARGON_UCI_CONFIG"
+    sed -i "s/transparency.*/transparency '0.5'/" "$ARGON_UCI_CONFIG"
+    sed -i "s/bing.*/bing '1'/" "$ARGON_UCI_CONFIG"
 fi
 
 ARGON_JS="package/luci-theme-argon/htdocs/luci-static/argon/js/script.js"
 if [ -f "$ARGON_JS" ]; then
-    sed -i '/clip-path/d' "$ARGON_JS"
+    sed -i 's/clip-path:[^;]*;//g' "$ARGON_JS"
 fi
 
 mkdir -p files/etc/uci-defaults
-cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
-chmod +x files/etc/uci-defaults/99-h5000m-zh-tw
+if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
+    cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
+fi
+chmod -R +x files/etc/uci-defaults/
 
 curl -sSL "https://raw.githubusercontent.com/padavanonly/immortalwrt-mt798x-6.6/mt798x-mt799x-6.6-mtwifi/defconfig/mt7987_mt7992.config" > .config
 cat "$project_root/config/h5000m.config" >> .config
@@ -207,5 +204,3 @@ printf 'Argon theme source: sbwml/luci-theme-argon\nArgon config: %s (sbwml sour
   "$argon_config_version" > .argon-buildinfo
 
 echo 'Build configuration is ready.'
-
-mkdir -p overlay/etc/uci-defaults/ && chmod -R +x overlay/etc/uci-defaults/
