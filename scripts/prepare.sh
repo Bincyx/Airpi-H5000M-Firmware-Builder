@@ -104,6 +104,7 @@ case "$argon_config_version" in
     ;;
 esac
 
+# 1. Inject custom CSS rules for rectangular/card menu and icons
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
@@ -119,6 +120,7 @@ if [ -f "$argon_css" ]; then
 EOF
 fi
 
+# 2. Modify default UCI config to lock primary color to #0F766E
 ARGON_UCI_CONFIG="package/luci-app-argon-config/root/etc/config/argon"
 if [ -f "$ARGON_UCI_CONFIG" ]; then
     sed -i "s/primary.*/primary '#0F766E'/" "$ARGON_UCI_CONFIG"
@@ -126,11 +128,13 @@ if [ -f "$ARGON_UCI_CONFIG" ]; then
     sed -i "s/bing.*/bing '1'/" "$ARGON_UCI_CONFIG"
 fi
 
+# 3. Safely strip dynamic clip-path attributes from JavaScript
 ARGON_JS="package/luci-theme-argon/htdocs/luci-static/argon/js/script.js"
 if [ -f "$ARGON_JS" ]; then
     sed -i 's/clip-path:[^;]*;//g' "$ARGON_JS"
 fi
 
+# 4. Create target directory, copy custom uci-defaults, and grant permissions
 mkdir -p files/etc/uci-defaults
 if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
     cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
