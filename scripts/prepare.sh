@@ -126,9 +126,14 @@ fi
 
 ARGON_UCI_CONFIG="package/luci-app-argon-config/root/etc/config/argon"
 if [ -f "$ARGON_UCI_CONFIG" ]; then
-    sed -i "s/option primary '.*/option primary '#31a1a1'/" "$ARGON_UCI_CONFIG"
-    sed -i "s/option transparency '.*/option transparency '0.5'/" "$ARGON_UCI_CONFIG"
-    sed -i "s/option bing '.*/option bing '1'/" "$ARGON_UCI_CONFIG"
+    sed -i "s/option primary .*/option primary '#31a1a1'/" "$ARGON_UCI_CONFIG"
+    sed -i "s/option transparency .*/option transparency '0.5'/" "$ARGON_UCI_CONFIG"
+    sed -i "s/option bing .*/option bing '1'/" "$ARGON_UCI_CONFIG"
+fi
+
+ARGON_JS="package/luci-theme-argon/htdocs/luci-static/argon/js/script.js"
+if [ -f "$ARGON_JS" ]; then
+    sed -i '/clip-path/d' "$ARGON_JS"
 fi
 
 mkdir -p files/etc/uci-defaults
