@@ -104,15 +104,19 @@ case "$argon_config_version" in
     ;;
 esac
 
-# 1. 修改預設 UCI 配置：預設主題色設為 #0F766E
-ARGON_UCI_CONFIG="package/luci-app-argon-config/root/etc/config/argon"
-if [ -f "$ARGON_UCI_CONFIG" ]; then
-    sed -i "s/primary.*/primary '#0F766E'/" "$ARGON_UCI_CONFIG"
-    sed -i "s/transparency.*/transparency '0.5'/" "$ARGON_UCI_CONFIG"
-    sed -i "s/bing.*/bing '1'/" "$ARGON_UCI_CONFIG"
-fi
+# 1. 直接覆寫/修正 sbwml 原生的 UCI 設定檔，確保 100% 保留 sbwml 結構並預設主色為 #0F766E
+mkdir -p files/etc/config
+cat << 'EOF' > files/etc/config/argon
+config global
+	option mode 'rc'
+	option primary '#0F766E'
+	option dark_primary '#0F766E'
+	option blur '0.5'
+	option transparency '0.5'
+	option bing '1'
+EOF
 
-# 2. 建立 files 檔案結構並覆蓋 uci-defaults 腳本
+# 2. 建立 files 檔案結構並處理 uci-defaults 腳本
 mkdir -p files/etc/uci-defaults
 if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
     cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
@@ -146,7 +150,7 @@ for required in \
   }
 done
 
-if [ "$enable_adguardhome" = 'true' ]; then
+if [ "$enable_adguardhome" = 'true' ]; me
   for required in \
     'CONFIG_PACKAGE_adguardhome=y' \
     'CONFIG_PACKAGE_luci-app-adguardhome=y'; do
@@ -175,12 +179,12 @@ for forbidden in \
   fi
 done
 
-# 3. 注入 CSS 規則：置於最後一步，長條膠囊樣式 + 色彩與 Argon 主題變數連動
+# 3. 注入 CSS 規則：長條膠囊樣式（置於最後一步，純追加 CSS，絕對不破壞 Argon 主題背景）
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
 
-/* 隱藏 Argon 強行插入的圓環與動態 SVG 圖表 */
+/* 隱藏 Argon 圓環與動態 SVG 圖表 */
 .cbi-progressbar svg,
 .progress svg,
 .cbi-progressbar-pie svg,
@@ -221,7 +225,7 @@ div[class*="progressbar"] > div {
     z-index: 1 !important;
 }
 
-/* 數值文字層（如數據 (-64/-44dBm) 或連線數，絕對居中浮於進度條最上層） */
+/* 數值文字層（絕對居中浮於進度條最上層） */
 .cbi-progressbar > div + div,
 .cbi-progressbar small,
 .cbi-progressbar span,
@@ -243,7 +247,7 @@ div[class*="progressbar"] > div {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* 保護網路連接埠卡片 (eth0 / eth1) 視覺結構，不受長條化影響 */
+/* 保護網路連接埠卡片 (eth0 / eth1) 視覺結構 */
 .network-status-table .cbi-progressbar,
 [class*="port"] .cbi-progressbar {
     border: none !important;
