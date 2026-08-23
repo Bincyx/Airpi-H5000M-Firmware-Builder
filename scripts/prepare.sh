@@ -179,12 +179,12 @@ for forbidden in \
   fi
 done
 
-# 3. 注入 CSS 規則：長條膠囊樣式
+# 3. 注入精準 CSS 規則：解決多重膠囊框疊加與文字切邊
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
 
-/* 隱藏 Argon 圓環與動態 SVG 圖表 */
+/* 1. 完全隱藏 Argon 圓環與動態 SVG 圖表 */
 .cbi-progressbar svg,
 .progress svg,
 .cbi-progressbar-pie svg,
@@ -192,12 +192,11 @@ svg.pie {
     display: none !important;
 }
 
-/* 全域進度條與連線總數 (conncount) 外框，統一改為膠囊長條 */
-.cbi-progressbar,
-.progress,
-.cbi-progressbar-pie,
-[id*="conn"] .cbi-progressbar,
-div[class*="progressbar"] {
+/* 2. 僅對最外層容器設定膠囊長條外框 */
+div.cbi-progressbar,
+div.progress,
+div.cbi-progressbar-pie,
+[id*="conn"] > .cbi-progressbar {
     position: relative !important;
     height: 18px !important;
     line-height: 18px !important;
@@ -210,11 +209,22 @@ div[class*="progressbar"] {
     margin: 4px 0 !important;
 }
 
-/* 內部進度填充：自動跟隨 Argon 主題設定的主色 (Primary Color) */
-.cbi-progressbar > div,
+/* 3. 重置內部所有子 div，消除多重膠囊框疊加與坍塌 */
+.cbi-progressbar div,
+.progress div,
+.cbi-progressbar-pie div {
+    height: 100% !important;
+    border: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+/* 4. 精準指定內部填充條（第一層子 div） */
+.cbi-progressbar > div:first-child,
 .progress > .progress-bar,
-.cbi-progressbar-pie > div,
-div[class*="progressbar"] > div {
+.cbi-progressbar-pie > div:first-child {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
@@ -225,8 +235,8 @@ div[class*="progressbar"] > div {
     z-index: 1 !important;
 }
 
-/* 數值文字層（絕對居中浮於進度條最上層） */
-.cbi-progressbar > div + div,
+/* 5. 數值文字層：絕對置中浮於長條正中央 */
+.cbi-progressbar > div:not(:first-child),
 .cbi-progressbar small,
 .cbi-progressbar span,
 .cbi-progressbar-pie small,
@@ -243,11 +253,13 @@ div[class*="progressbar"] > div {
     color: #ffffff !important;
     font-size: 11px !important;
     font-weight: 500 !important;
+    line-height: 1 !important;
     z-index: 2 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    background: transparent !important;
 }
 
-/* 保護網路連接埠卡片 (eth0 / eth1) 視覺結構 */
+/* 6. 保護網路連接埠卡片 (eth0 / eth1) 視覺結構 */
 .network-status-table .cbi-progressbar,
 [class*="port"] .cbi-progressbar {
     border: none !important;
