@@ -104,20 +104,33 @@ case "$argon_config_version" in
     ;;
 esac
 
-# 1. Inject CSS rules strictly targeted at sidebar menu icons, overriding JS inline styles
+# 1. Convert dashboard circle progress charts into horizontal bar style
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
 
-/* Force remove clip-path injected by JS specifically for sidebar icons */
-.main-left .nav .slide .menu img,
-.main-left .nav .slide .menu img[style*="clip-path"],
-.main-left .nav .slide .menu i,
-.main-left .nav .slide .menu i[style*="clip-path"] {
-    border-radius: 6px !important;
+/* Force dashboard progress elements to render as horizontal bars instead of circles */
+.main-right .cbi-progressbar,
+.main-right .progress,
+.node-main .cbi-progressbar,
+.node-main .progress {
+    border-radius: 4px !important;
     clip-path: none !important;
     -webkit-clip-path: none !important;
-    width: auto !important;
+    height: 12px !important;
+    width: 100% !important;
+    max-width: 180px !important;
+    margin: 8px auto !important;
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.main-right .cbi-progressbar > div,
+.main-right .progress > .progress-bar,
+.node-main .cbi-progressbar > div,
+.node-main .progress > .progress-bar {
+    border-radius: 4px !important;
+    height: 100% !important;
+    background-color: #0F766E !important;
 }
 EOF
 fi
