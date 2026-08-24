@@ -19,17 +19,23 @@ for radio in radio0 radio1; do
 done
 
 # Match the requested dark Argon layout with a teal accent.
-uci -q set argon.@global[0].mode='dark'
-uci -q set argon.@global[0].primary='#0F766E'
-uci -q set argon.@global[0].dark_primary='#0F766E'
-uci -q set argon.@global[0].blur='10'
-uci -q set argon.@global[0].blur_dark='10'
-uci -q set argon.@global[0].transparency='0.5'
-uci -q set argon.@global[0].transparency_dark='0.5'
+uci -q batch <<EOF
+	delete argon.global
+	set argon.global=global
+	set argon.global.mode='dark'
+	set argon.global.primary='#0F766E'
+	set argon.global.main_primary='#0F766E'
+	set argon.global.dark_primary='#0F766E'
+	set argon.global.blur='10'
+	set argon.global.blur_dark='10'
+	set argon.global.transparency='0.5'
+	set argon.global.transparency_dark='0.5'
+	commit argon
+EOF
+
 uci -q commit luci
 uci -q commit system
 uci -q commit wireless
-uci -q commit argon
 
 # Keep AdGuard Home installed but disabled until the user configures DNS.
 if [ -x /etc/init.d/adguardhome ]; then
