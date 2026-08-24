@@ -179,12 +179,12 @@ for forbidden in \
   fi
 done
 
-# 3. 注入精準 CSS 規則：解決多重膠囊框疊加與文字切邊
+# 3. 注入精準 CSS 規則：解決多重膠囊框疊加與文字切邊 (完美適配 sbwml + QModem)
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
 
-/* 1. 完全隱藏 Argon 圓環與動態 SVG 圖表 */
+/* 1. 隱藏 Argon 原生 SVG 圓環 */
 .cbi-progressbar svg,
 .progress svg,
 .cbi-progressbar-pie svg,
@@ -192,10 +192,25 @@ svg.pie {
     display: none !important;
 }
 
-/* 2. 僅對最外層容器設定膠囊長條外框 */
+/* 2. 重置記憶體與儲存空間的 SVG 圓環容器：解開 120px 限制，拉成 100% 滿寬長條 */
+.cbi-progressbar-pie {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 18px !important;
+    line-height: 18px !important;
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 9px !important;
+    overflow: hidden !important;
+    position: relative !important;
+    margin: 6px 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* 3. 統一通用進度條外框 (QModem / 系統連接數) */
 div.cbi-progressbar,
 div.progress,
-div.cbi-progressbar-pie,
 [id*="conn"] > .cbi-progressbar {
     position: relative !important;
     height: 18px !important;
@@ -209,11 +224,10 @@ div.cbi-progressbar-pie,
     margin: 4px 0 !important;
 }
 
-/* 3. 重置內部所有子 div，消除多重膠囊框疊加與坍塌 */
+/* 4. 清除內層子 div 的雜亂邊框與圓角 */
 .cbi-progressbar div,
 .progress div,
 .cbi-progressbar-pie div {
-    height: 100% !important;
     border: none !important;
     border-radius: 0 !important;
     margin: 0 !important;
@@ -221,7 +235,7 @@ div.cbi-progressbar-pie,
     box-shadow: none !important;
 }
 
-/* 4. 精準指定內部填充條（第一層子 div） */
+/* 5. 填充條（第一層子元素）：自動抓主題色、同時讓內部文字 (QModem) 可以向右凸顯 */
 .cbi-progressbar > div:first-child,
 .progress > .progress-bar,
 .cbi-progressbar-pie > div:first-child {
@@ -233,9 +247,20 @@ div.cbi-progressbar-pie,
     border-radius: 8px !important;
     transition: width 0.3s ease !important;
     z-index: 1 !important;
+    
+    /* 確保 QModem 的文字能顯示在填充條內 */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    padding-right: 8px !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    box-sizing: border-box !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
-/* 5. 數值文字層：絕對置中浮於長條正中央 */
+/* 6. 獨立數值文字層（記憶體/儲存空間等非內嵌數字）：置中於長條正中央 */
 .cbi-progressbar > div:not(:first-child),
 .cbi-progressbar small,
 .cbi-progressbar span,
@@ -252,14 +277,14 @@ div.cbi-progressbar-pie,
     justify-content: center !important;
     color: #ffffff !important;
     font-size: 11px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     line-height: 1 !important;
     z-index: 2 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9) !important;
     background: transparent !important;
 }
 
-/* 6. 保護網路連接埠卡片 (eth0 / eth1) 視覺結構 */
+/* 7. 保護網口卡片 (eth0 / eth1) 結構不受長條干擾 */
 .network-status-table .cbi-progressbar,
 [class*="port"] .cbi-progressbar {
     border: none !important;
