@@ -18,9 +18,9 @@ for radio in radio0 radio1; do
 	fi
 done
 
-# Match the requested dark Argon layout with a teal accent.
+# Match the requested dark Argon layout with a teal accent safely.
 uci -q batch <<EOF
-	delete argon.global
+	delete argon
 	set argon.global=global
 	set argon.global.mode='dark'
 	set argon.global.primary='#0F766E'
