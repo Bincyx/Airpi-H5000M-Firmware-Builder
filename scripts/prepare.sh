@@ -80,10 +80,10 @@ find feeds/luci feeds/packages -maxdepth 3 -type d \
   -prune -exec rm -rf {} + 2>/dev/null || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 
-# Fetch both theme and config directly from sbwml's openwrt-24.10 branch
+# Fetch theme from openwrt-24.10 branch, and config from default branch
 argon_tmp="$(mktemp -d)"
 git clone -b openwrt-24.10 --depth 1 https://github.com/sbwml/luci-theme-argon.git "$argon_tmp/theme"
-git clone -b openwrt-24.10 --depth 1 https://github.com/sbwml/luci-app-argon-config.git "$argon_tmp/config"
+git clone --depth 1 https://github.com/sbwml/luci-app-argon-config.git "$argon_tmp/config"
 mv "$argon_tmp/theme" package/luci-theme-argon
 mv "$argon_tmp/config" package/luci-app-argon-config
 rm -rf "$argon_tmp"
