@@ -104,21 +104,6 @@ case "$argon_config_version" in
     ;;
 esac
 
-# 1. 寫入預設的主題設定檔（顏色指定為青綠色 #0F766E，開機自動讀取生效）
-mkdir -p files/etc/config
-cat << 'EOF' > files/etc/config/argon
-config global
-	option mode 'dark'
-	option primary '#0F766E'
-	option main_primary '#0F766E'
-	option dark_primary '#0F766E'
-	option blur '10'
-	option blur_dark '10'
-	option transparency '0.5'
-	option transparency_dark '0.5'
-	option bing '1'
-EOF
-
 # 2. 建立 files 檔案結構並複製 overlay 腳本
 mkdir -p files/etc/uci-defaults
 if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
