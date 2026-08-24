@@ -80,12 +80,11 @@ find feeds/luci feeds/packages -maxdepth 3 -type d \
   -prune -exec rm -rf {} + 2>/dev/null || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 
-# Fetch theme from openwrt-24.10 branch, and config from default branch
+# Fetch openwrt-24.10 repo containing both theme and config subdirectories
 argon_tmp="$(mktemp -d)"
-git clone -b openwrt-24.10 --depth 1 https://github.com/sbwml/luci-theme-argon.git "$argon_tmp/theme"
-git clone --depth 1 https://github.com/sbwml/luci-app-argon-config.git "$argon_tmp/config"
-mv "$argon_tmp/theme" package/luci-theme-argon
-mv "$argon_tmp/config" package/luci-app-argon-config
+git clone -b openwrt-24.10 --depth 1 https://github.com/sbwml/luci-theme-argon.git "$argon_tmp"
+mv "$argon_tmp/luci-theme-argon" package/luci-theme-argon
+mv "$argon_tmp/luci-app-argon-config" package/luci-app-argon-config
 rm -rf "$argon_tmp"
 
 # The upstream supports both APK and IPK.
