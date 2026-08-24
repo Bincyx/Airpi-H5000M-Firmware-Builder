@@ -179,20 +179,18 @@ for forbidden in \
   fi
 done
 
-# 3. 注入精準 CSS 規則：解決多重膠囊框疊加與文字切邊 (完美適配 sbwml + QModem)
+# 3. 注入精準 CSS：僅將系統首頁記憶體/儲存圓環改為長條，絕不干擾 QModem
 argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
 if [ -f "$argon_css" ]; then
     cat << 'EOF' >> "$argon_css"
 
-/* 1. 隱藏 Argon 原生 SVG 圓環 */
-.cbi-progressbar svg,
-.progress svg,
+/* 1. 隱藏 Argon 原生 SVG 圓環圖表 */
 .cbi-progressbar-pie svg,
 svg.pie {
     display: none !important;
 }
 
-/* 2. 重置記憶體與儲存空間的 SVG 圓環容器：解開 120px 限制，拉成 100% 滿寬長條 */
+/* 2. 僅重置記憶體/儲存空間的外層容器：拉成 100% 滿寬長條膠囊 */
 .cbi-progressbar-pie {
     display: block !important;
     width: 100% !important;
@@ -208,25 +206,7 @@ svg.pie {
     box-sizing: border-box !important;
 }
 
-/* 3. 統一通用進度條外框 (QModem / 系統連接數) */
-div.cbi-progressbar,
-div.progress,
-[id*="conn"] > .cbi-progressbar {
-    position: relative !important;
-    height: 18px !important;
-    line-height: 18px !important;
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    border-radius: 9px !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    width: 100% !important;
-    margin: 4px 0 !important;
-}
-
-/* 4. 清除內層子 div 的雜亂邊框與圓角 */
-.cbi-progressbar div,
-.progress div,
+/* 3. 清除內部子元素的邊框與邊距 */
 .cbi-progressbar-pie div {
     border: none !important;
     border-radius: 0 !important;
@@ -235,9 +215,7 @@ div.progress,
     box-shadow: none !important;
 }
 
-/* 5. 填充條（第一層子元素）：自動抓主題色、同時讓內部文字 (QModem) 可以向右凸顯 */
-.cbi-progressbar > div:first-child,
-.progress > .progress-bar,
+/* 4. 僅針對記憶體/儲存的內部進度填充條設定樣式 */
 .cbi-progressbar-pie > div:first-child {
     position: absolute !important;
     top: 0 !important;
@@ -247,26 +225,12 @@ div.progress,
     border-radius: 8px !important;
     transition: width 0.3s ease !important;
     z-index: 1 !important;
-    
-    /* 確保 QModem 的文字能顯示在填充條內 */
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-end !important;
-    padding-right: 8px !important;
-    color: #ffffff !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    box-sizing: border-box !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
 }
 
-/* 6. 獨立數值文字層（記憶體/儲存空間等非內嵌數字）：置中於長條正中央 */
-.cbi-progressbar > div:not(:first-child),
-.cbi-progressbar small,
-.cbi-progressbar span,
+/* 5. 僅針對記憶體/儲存的數值文字設定垂直水平居中 */
 .cbi-progressbar-pie small,
 .cbi-progressbar-pie span,
-.progress span {
+.cbi-progressbar-pie > div:not(:first-child) {
     position: absolute !important;
     top: 0 !important;
     left: 0 !important;
@@ -282,14 +246,6 @@ div.progress,
     z-index: 2 !important;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9) !important;
     background: transparent !important;
-}
-
-/* 7. 保護網口卡片 (eth0 / eth1) 結構不受長條干擾 */
-.network-status-table .cbi-progressbar,
-[class*="port"] .cbi-progressbar {
-    border: none !important;
-    background: transparent !important;
-    height: auto !important;
 }
 EOF
 fi
