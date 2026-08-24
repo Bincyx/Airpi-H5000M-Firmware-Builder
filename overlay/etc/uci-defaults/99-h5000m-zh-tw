@@ -18,19 +18,18 @@ for radio in radio0 radio1; do
 	fi
 done
 
-# Match the requested dark Argon layout with a teal accent safely.
-uci -q batch <<EOF
-	delete argon
-	set argon.global=global
-	set argon.global.mode='dark'
-	set argon.global.primary='#0F766E'
-	set argon.global.main_primary='#0F766E'
-	set argon.global.dark_primary='#0F766E'
-	set argon.global.blur='10'
-	set argon.global.blur_dark='10'
-	set argon.global.transparency='0.5'
-	set argon.global.transparency_dark='0.5'
-	commit argon
+# Force overwrite /etc/config/argon to ensure exactly ONE section exists.
+cat << 'EOF' > /etc/config/argon
+config global
+	option mode 'dark'
+	option primary '#0F766E'
+	option main_primary '#0F766E'
+	option dark_primary '#0F766E'
+	option blur '10'
+	option blur_dark '10'
+	option transparency '0.5'
+	option transparency_dark '0.5'
+	option bing '1'
 EOF
 
 uci -q commit luci
