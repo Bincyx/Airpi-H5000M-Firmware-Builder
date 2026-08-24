@@ -108,11 +108,14 @@ esac
 mkdir -p files/etc/config
 cat << 'EOF' > files/etc/config/argon
 config global
-	option mode 'rc'
+	option mode 'dark'
 	option primary '#0F766E'
+	option main_primary '#0F766E'
 	option dark_primary '#0F766E'
-	option blur '0.5'
+	option blur '10'
+	option blur_dark '10'
 	option transparency '0.5'
+	option transparency_dark '0.5'
 	option bing '1'
 EOF
 
