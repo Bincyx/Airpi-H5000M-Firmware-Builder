@@ -80,11 +80,12 @@ find feeds/luci feeds/packages -maxdepth 3 -type d \
   -prune -exec rm -rf {} + 2>/dev/null || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 
-# Fetch both theme and config directly from sbwml's repository
+# Fetch both theme and config directly from sbwml's openwrt-24.10 branch
 argon_tmp="$(mktemp -d)"
-git clone --depth 1 https://github.com/sbwml/luci-theme-argon.git "$argon_tmp"
-mv "$argon_tmp/luci-theme-argon" package/luci-theme-argon
-mv "$argon_tmp/luci-app-argon-config" package/luci-app-argon-config
+git clone -b openwrt-24.10 --depth 1 https://github.com/sbwml/luci-theme-argon.git "$argon_tmp/theme"
+git clone -b openwrt-24.10 --depth 1 https://github.com/sbwml/luci-app-argon-config.git "$argon_tmp/config"
+mv "$argon_tmp/theme" package/luci-theme-argon
+mv "$argon_tmp/config" package/luci-app-argon-config
 rm -rf "$argon_tmp"
 
 # The upstream supports both APK and IPK.
@@ -104,7 +105,7 @@ case "$argon_config_version" in
     ;;
 esac
 
-# 1. 直接建立 sbwml 原生的 UCI 設定檔，確保預設顏色為 #0F766E 且結構完整
+# 1. 寫入預設的主題設定檔（顏色指定為青綠色 #0F766E，開機自動讀取生效）
 mkdir -p files/etc/config
 cat << 'EOF' > files/etc/config/argon
 config global
@@ -178,77 +179,6 @@ for forbidden in \
     exit 1
   fi
 done
-
-# 3. 注入精準 CSS：僅將系統首頁記憶體/儲存圓環改為長條，絕不干擾 QModem
-argon_css="package/luci-theme-argon/htdocs/luci-static/argon/css/cascade.css"
-if [ -f "$argon_css" ]; then
-    cat << 'EOF' >> "$argon_css"
-
-/* 1. 隱藏 Argon 原生 SVG 圓環圖表 */
-.cbi-progressbar-pie svg,
-svg.pie {
-    display: none !important;
-}
-
-/* 2. 僅重置記憶體/儲存空間的外層容器：拉成 100% 滿寬長條膠囊 */
-.cbi-progressbar-pie {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 18px !important;
-    line-height: 18px !important;
-    background-color: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    border-radius: 9px !important;
-    overflow: hidden !important;
-    position: relative !important;
-    margin: 6px 0 !important;
-    box-sizing: border-box !important;
-}
-
-/* 3. 清除內部子元素的邊框與邊距 */
-.cbi-progressbar-pie div {
-    border: none !important;
-    border-radius: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-}
-
-/* 4. 僅針對記憶體/儲存的內部進度填充條設定樣式 */
-.cbi-progressbar-pie > div:first-child {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    height: 100% !important;
-    background-color: var(--primary-color, #0F766E) !important;
-    border-radius: 8px !important;
-    transition: width 0.3s ease !important;
-    z-index: 1 !important;
-}
-
-/* 5. 僅針對記憶體/儲存的數值文字設定垂直水平居中 */
-.cbi-progressbar-pie small,
-.cbi-progressbar-pie span,
-.cbi-progressbar-pie > div:not(:first-child) {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    color: #ffffff !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    line-height: 1 !important;
-    z-index: 2 !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9) !important;
-    background: transparent !important;
-}
-EOF
-fi
 
 if [ "$enable_adguardhome" = 'true' ]; then
   printf 'AdGuard Home: %s (pinned for Go 1.23 compatibility)\nLatest recipe observed: %s\nPackage recipe: openwrt/packages master\nLuCI source: openwrt/luci master\n' \
