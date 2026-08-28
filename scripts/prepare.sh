@@ -17,6 +17,187 @@ cd "$workspace"
 
 rm -f .config
 
+# QModem is a build-time source feed, not a runtime OPKG/APK repository.
+# Keep feeds.conf.default untouched so its Git URL cannot leak into firmware.
+test -f feeds.conf || cp feeds.conf.default feeds.conf
+if ! grep -Eq '^src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf; then
+  printf '%s\n' 'src-git qmodem https://github.com/FUjr/QModem.git;main' >> feeds.conf
+fi
+
+./scripts/feeds update -a
+./scripts/feeds install -a
+./scripts/feeds install -a -f -p qmodem
+test -f package/feeds/qmodem/luci-app-qmodem-next/Makefile || {
+  echo 'QModem feed did not install luci-app-qmodem-next.' >&2
+  exit 1
+}
+
+rm -rf package/mtk/applications/5g-modem
+
+# Backport the current OpenWrt AdGuard Home package and LuCI integration.
+adguard_sources="$(mktemp -d)"
+trap 'rm -rf "$adguard_sources"' EXIT
+
+git clone --depth 1 --filter=blob:none --sparse \
+  https://github.com/openwrt/packages.git "$adguard_sources/packages"
+git -C "$adguard_sources/packages" sparse-checkout set net/adguardhome
+
+git clone --depth 1 --filter=blob:none --sparse \
+  https://github.com/openwrt/luci.git "$adguard_sources/luci"
+git -C "$adguard_sources/luci" sparse-checkout set applications/luci-app-adguardhome
+
+adguard_latest_version="$(sed -n 's/^PKG_VERSION:=//p' \
+  "$adguard_sources/packages/net/adguardhome/Makefile" | head -n 1)"
+test -n "$adguard_latest_version"
+
+adguard_version='0.107.57'
+adguard_source_hash='9df951486dab0e83485b596c0393f91d4ff2994de26101b43af8344efb7c1536'
+adguard_frontend_hash='fc0b57d80dece4219bfba833b48122ffe7a140ee2026cd3cf4c7181ccdcf8c9e'
+
+rm -rf feeds/packages/net/adguardhome feeds/luci/applications/luci-app-adguardhome
+cp -a "$adguard_sources/packages/net/adguardhome" feeds/packages/net/adguardhome
+cp -a "$adguard_sources/luci/applications/luci-app-adguardhome" \
+  feeds/luci/applications/luci-app-adguardhome
+
+sed -i \
+  -e "s/^PKG_VERSION:=.*/PKG_VERSION:=$adguard_version/" \
+  -e "s/^PKG_HASH:=.*/PKG_HASH:=$adguard_source_hash/" \
+  -e "s/^FRONTEND_HASH:=.*/FRONTEND_HASH:=$adguard_frontend_hash/" \
+  feeds/packages/net/adguardhome/Makefile
+
+./scripts/feeds update -i packages
+./scripts/feeds update -i luci
+./scripts/feeds install -f -p packages adguardhome
+./scripts/feeds install -f -p luci luci-app-adguardhome
+
+grep -Fq "option config_file '/etc/adguardhome/adguardhome.yaml'" \
+  feeds/packages/net/adguardhome/files/adguardhome.conf
+grep -Fq "option work_dir '/var/lib/adguardhome'" \
+  feeds/packages/net/adguardhome/files/adguardhome.conf
+
+# Clean up obsolete theme and config packages from feeds and package tree
+find feeds/luci feeds/packages -maxdepth 3 -type d \
+  \( -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
+  -prune -exec rm -rf {} + 2>/dev/null || true
+rm -rf package/luci-theme-argon package/luci-app-argon-config
+
+# Fetch openwrt-24.10 repo containing both theme and config subdirectories
+argon_tmp="$(mktemp -d)"
+git clone -b openwrt-24.10 --depth 1 https://github.com/sbwml/luci-theme-argon.git "$argon_tmp"
+mv "$argon_tmp/luci-theme-argon" package/luci-theme-argon
+mv "$argon_tmp/luci-app-argon-config" package/luci-app-argon-config
+rm -rf "$argon_tmp"
+
+# The upstream supports both APK and IPK.
+sed -i 's/^LUCI_DEPENDS:=.*/LUCI_DEPENDS:=+wget +jsonfilter/' \
+  package/luci-theme-argon/Makefile
+
+# Validate argon-config package
+argon_config_makefile='package/luci-app-argon-config/Makefile'
+test -f "$argon_config_makefile"
+argon_config_version="$(sed -n 's/^PKG_VERSION:=//p' \
+  "$argon_config_makefile" | head -n 1)"
+test -n "$argon_config_version"
+case "$argon_config_version" in
+  0.9*)
+    echo "Obsolete luci-app-argon-config was selected: $argon_config_version" >&2
+    exit 1
+    ;;
+esac
+
+# 2. 建立 files 檔案結構並複製 overlay 腳本
+mkdir -p files/etc/uci-defaults
+if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
+    cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
+fi
+chmod -R +x files/etc/uci-defaults/
+
+curl -sSL "https://raw.githubusercontent.com/padavanonly/immortalwrt-mt798x-6.6/mt798x-mt799x-6.6-mtwifi/defconfig/mt7987_mt7992.config" > .config
+cat "$project_root/config/h5000m.config" >> .config
+
+if [ "$enable_adguardhome" != 'true' ]; then
+  sed -i \
+    -e '/^CONFIG_PACKAGE_adguardhome=y$/d' \
+    -e '/^CONFIG_PACKAGE_luci-app-adguardhome=y$/d' \
+    .config
+fi
+make defconfig
+
+for required in \
+  'CONFIG_PACKAGE_luci-app-qmodem-next=y' \
+  'CONFIG_PACKAGE_qmodem=y' \
+  'CONFIG_PACKAGE_ndisc6=y' \
+  'CONFIG_PACKAGE_kmod-mt7992=y' \
+  'CONFIG_PACKAGE_kmod-mt799a=y' \
+  'CONFIG_PACKAGE_kmod-mt_hwifi=y' \
+  'CONFIG_PACKAGE_kmod-mt_wifi7=y' \
+  'CONFIG_PACKAGE_luci-ssl-openssl=y' \
+  'CONFIG_WARP_VERSION="3_1"'; do
+  grep -Fqx "$required" .config || {
+    echo "Required build setting is missing: $required" >&2
+    exit 1
+  }
+done
+
+if [ "$enable_adguardhome" = 'true' ]; then
+  for required in \
+    'CONFIG_PACKAGE_adguardhome=y' \
+    'CONFIG_PACKAGE_luci-app-adguardhome=y'; do
+    grep -Fqx "$required" .config || {
+      echo "Required AdGuard Home setting is missing: $required" >&2
+      exit 1
+    }
+  done
+elif grep -Eq '^CONFIG_PACKAGE_(adguardhome|luci-app-adguardhome)=y$' .config; then
+  echo 'AdGuard Home was selected even though it was disabled.' >&2
+  exit 1
+fi
+
+for forbidden in \
+  'CONFIG_PACKAGE_luci-app-modem=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem-sms=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem-mwan=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem-ttl=y' \
+  'CONFIG_PACKAGE_luci-app-qmodem-hc=y' \
+  'CONFIG_PACKAGE_libustream-mbedtls=y' \
+  'CONFIG_PACKAGE_libustream-mbedtls20201210=y'; do
+  if grep -Fqx "$forbidden" .config; then
+    echo "Conflicting build setting was selected: $forbidden" >&2
+    exit 1
+  fi
+done
+
+if [ "$enable_adguardhome" = 'true' ]; then
+  printf 'AdGuard Home: %s (pinned for Go 1.23 compatibility)\nLatest recipe observed: %s\nPackage recipe: openwrt/packages master\nLuCI source: openwrt/luci master\n' \
+    "$adguard_version" "$adguard_latest_version" > .adguardhome-buildinfo
+else
+  printf 'AdGuard Home: disabled by workflow input\n' > .adguardhome-buildinfo
+fi
+
+printf 'Argon theme source: sbwml/luci-theme-argon\nArgon config: %s (sbwml source, built as IPK; 0.9.x rejected)\n' \
+  "$argon_config_version" > .argon-buildinfo
+
+echo 'Build configuration is ready.'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+workspace="${1:?source directory is required}"
+enable_adguardhome="${2:-true}"
+project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+case "$enable_adguardhome" in
+  true|false) ;;
+  *)
+    echo "ENABLE_ADGUARDHOME must be true or false." >&2
+    exit 1
+    ;;
+esac
+
+cd "$workspace"
+
+rm -f .config
+
 # QModem is not part of the standard ImmortalWrt 24.10 feeds. Register its
 # official source before updating feeds so luci-app-qmodem-next is available.
 if ! grep -Eq '^src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf.default; then
