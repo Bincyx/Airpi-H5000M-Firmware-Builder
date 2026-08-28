@@ -8,11 +8,6 @@ on:
         required: false
         type: boolean
         default: false
-      enable_adguardhome:
-        description: Enable AdGuard Home and its LuCI app
-        required: false
-        type: boolean
-        default: false
   schedule:
     # Check the selected upstream branch daily at 04:00 Asia/Taipei.
     - cron: '0 20 * * *'
@@ -98,9 +93,7 @@ jobs:
             h5000m-v2-${{ runner.os }}-${{ env.SOURCE_BRANCH }}-
 
       - name: Prepare firmware configuration
-        env:
-          ENABLE_ADGUARDHOME: ${{ github.event_name != 'workflow_dispatch' || inputs.enable_adguardhome }}
-        run: bash ./scripts/prepare.sh .work/source "$ENABLE_ADGUARDHOME"
+        run: bash ./scripts/prepare.sh .work/source
 
       - name: Download package sources
         working-directory: .work/source
