@@ -51,11 +51,5 @@ for repo_file in \
 		"$repo_file"
 done
 
-# Keep AdGuard Home installed but disabled until the user configures DNS.
-if [ -x /etc/init.d/adguardhome ]; then
-	/etc/init.d/adguardhome disable
-	/etc/init.d/adguardhome stop
-fi
-
 exit 0
 
