@@ -93,11 +93,9 @@ jobs:
           path: |
             .work/source/dl
             .work/source/.ccache
-            .work/source/staging_dir/host*
-            .work/source/staging_dir/tool*
-          key: h5000m-${{ runner.os }}-${{ env.SOURCE_BRANCH }}-${{ env.SOURCE_COMMIT }}-${{ hashFiles('config/**', 'scripts/**', 'overlay/**') }}
+          key: h5000m-v2-${{ runner.os }}-${{ env.SOURCE_BRANCH }}-${{ env.SOURCE_COMMIT }}-${{ hashFiles('config/**', 'scripts/**', 'overlay/**') }}
           restore-keys: |
-            h5000m-${{ runner.os }}-${{ env.SOURCE_BRANCH }}-
+            h5000m-v2-${{ runner.os }}-${{ env.SOURCE_BRANCH }}-
 
       - name: Prepare firmware configuration
         env:
