@@ -36,6 +36,21 @@ uci -q commit luci
 uci -q commit system
 uci -q commit wireless
 
+# QModem is compiled from Git source. It is not a binary OPKG/APK repository,
+# so remove any accidentally inherited runtime entry before list updates run.
+for repo_file in \
+	/etc/apk/repositories \
+	/etc/apk/repositories.d/*.list \
+	/etc/opkg/distfeeds.conf \
+	/etc/opkg/customfeeds.conf; do
+	[ -f "$repo_file" ] || continue
+	sed -i \
+		-e '/github\.com\/FUjr\/QModem/d' \
+		-e '/github\.com\/fujr\/qmodem/d' \
+		-e '/^[[:space:]]*src\/gz[[:space:]]*qmodem[[:space:]]/d' \
+		"$repo_file"
+done
+
 # Keep AdGuard Home installed but disabled until the user configures DNS.
 if [ -x /etc/init.d/adguardhome ]; then
 	/etc/init.d/adguardhome disable
