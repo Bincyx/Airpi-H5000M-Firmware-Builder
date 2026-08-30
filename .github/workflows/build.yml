@@ -1,6 +1,8 @@
 name: Build H5000M firmware
 
 
+
+
 on:
   workflow_dispatch:
     inputs:
@@ -14,18 +16,26 @@ on:
     - cron: '0 20 * * *'
 
 
+
+
 concurrency:
   group: h5000m-firmware
   cancel-in-progress: false
+
+
 
 
 permissions:
   contents: write
 
 
+
+
 env:
   SOURCE_REPOSITORY: https://github.com/padavanonly/immortalwrt-mt798x-24.10.git
   SOURCE_BRANCH: mt798x-mt799x-6.6-mtwifi
+
+
 
 
 jobs:
@@ -35,6 +45,8 @@ jobs:
     outputs:
       should_build: ${{ steps.check.outputs.should_build }}
       source_commit: ${{ steps.check.outputs.source_commit }}
+
+
 
 
     steps:
@@ -67,9 +79,13 @@ jobs:
     timeout-minutes: 360
 
 
+
+
     steps:
       - name: Check out builder
         uses: actions/checkout@v6
+
+
 
 
       - name: Free disk space
@@ -91,7 +107,7 @@ jobs:
 
       - name: Restore download and build caches
         if: ${{ !inputs.clean_build }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .work/source/dl
@@ -102,6 +118,8 @@ jobs:
 
       - name: Prepare firmware configuration
         run: bash ./scripts/prepare.sh .work/source
+
+
 
 
       - name: Download package sources
@@ -125,6 +143,8 @@ jobs:
         run: bash ./scripts/collect.sh .work/source .work/release
 
 
+
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v6
         with:
@@ -132,6 +152,8 @@ jobs:
           path: .work/release/
           retention-days: 30
           if-no-files-found: error
+
+
 
 
       - name: Publish release
