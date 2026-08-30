@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Check out builder
-        uses: actions/checkout@v4
+        uses: 
 
       - name: Free disk space
         run: |
@@ -116,7 +116,7 @@ jobs:
         run: bash ./scripts/collect.sh .work/source .work/release
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: 
         with:
           name: H5000M-zh-tw-${{ env.SOURCE_COMMIT }}
           path: .work/release/
