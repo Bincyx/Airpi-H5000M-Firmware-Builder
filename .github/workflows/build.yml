@@ -1,5 +1,6 @@
 name: Build H5000M firmware
 
+
 on:
   workflow_dispatch:
     inputs:
@@ -12,16 +13,20 @@ on:
     # Check the selected upstream branch daily at 04:00 Asia/Taipei.
     - cron: '0 20 * * *'
 
+
 concurrency:
   group: h5000m-firmware
   cancel-in-progress: false
 
+
 permissions:
   contents: write
+
 
 env:
   SOURCE_REPOSITORY: https://github.com/padavanonly/immortalwrt-mt798x-24.10.git
   SOURCE_BRANCH: mt798x-mt799x-6.6-mtwifi
+
 
 jobs:
   check-upstream:
@@ -30,6 +35,7 @@ jobs:
     outputs:
       should_build: ${{ steps.check.outputs.should_build }}
       source_commit: ${{ steps.check.outputs.source_commit }}
+
 
     steps:
       - name: Compare upstream with successful releases
@@ -60,9 +66,11 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 360
 
+
     steps:
       - name: Check out builder
-        uses: 
+        uses: actions/checkout@v6
+
 
       - name: Free disk space
         run: |
@@ -95,6 +103,7 @@ jobs:
       - name: Prepare firmware configuration
         run: bash ./scripts/prepare.sh .work/source
 
+
       - name: Download package sources
         working-directory: .work/source
         run: |
@@ -115,13 +124,15 @@ jobs:
       - name: Collect firmware and checksums
         run: bash ./scripts/collect.sh .work/source .work/release
 
+
       - name: Upload build artifacts
-        uses: 
+        uses: actions/upload-artifact@v6
         with:
           name: H5000M-zh-tw-${{ env.SOURCE_COMMIT }}
           path: .work/release/
           retention-days: 30
           if-no-files-found: error
+
 
       - name: Publish release
         env:
