@@ -1,6 +1,8 @@
 #!/bin/sh
 
 
+
+
 # Configure Traditional Chinese LuCI and the Taipei timezone on first boot.
 uci -q set luci.main.lang='zh_tw'
 uci -q set luci.main.mediaurlbase='/luci-static/argon'
@@ -9,9 +11,13 @@ uci -q set system.@system[0].zonename='Asia/Taipei'
 uci -q set system.@system[0].timezone='CST-8'
 
 
+
+
 # Set custom LAN IP
 uci -q set network.lan.ipaddr='192.168.1.1'
 uci -q commit network
+
+
 
 
 # Apply the requested US wireless regulatory domain to existing radios.
@@ -20,6 +26,8 @@ for radio in radio0 radio1; do
 		uci -q set "wireless.${radio}.country=US"
 	fi
 done
+
+
 
 
 # Force overwrite /etc/config/argon to ensure exactly ONE section exists.
@@ -36,6 +44,22 @@ config global
 	option bing '1'
 EOF
 
+
+
+
+
+# QModem is built into the firmware from its Git feed; it is not a hosted
+# binary package repository. Remove generated or preserved runtime entries so
+# package-list updates never request a non-existent qmodem index.
+for feed_file in /etc/opkg/distfeeds.conf /etc/opkg/customfeeds.conf; do
+	[ -f "$feed_file" ] || continue
+	sed -i -E '/^[[:space:]]*src\/gz[[:space:]]+[^[:space:]]*qmodem[[:space:]]+/d' "$feed_file"
+done
+for feed_file in /etc/apk/repositories /etc/apk/repositories.d/*; do
+	[ -f "$feed_file" ] || continue
+	sed -i '/qmodem/d' "$feed_file"
+done
+rm -f /var/opkg-lists/*qmodem* 2>/dev/null || true
 
 uci -q commit luci
 uci -q commit system
