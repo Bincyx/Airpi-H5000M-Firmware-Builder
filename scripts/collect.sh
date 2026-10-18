@@ -17,7 +17,7 @@ fi
 
 cp -f "${firmware[@]}" "$output/"
 cp -f "$workspace/.config" "$output/build.config"
-cp -f "$workspace/.argon-buildinfo" "$output/ARGON-SOURCE.txt"
+cp -f "$workspace/.footstrap-buildinfo" "$output/FOOTSTRAP-SOURCE.txt"
 
 (
   cd "$output"

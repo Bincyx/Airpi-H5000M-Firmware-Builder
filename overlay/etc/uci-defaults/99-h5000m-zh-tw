@@ -5,7 +5,7 @@
 
 # Configure Traditional Chinese LuCI and the Taipei timezone on first boot.
 uci -q set luci.main.lang='zh_tw'
-uci -q set luci.main.mediaurlbase='/luci-static/argon'
+uci -q set luci.main.mediaurlbase='/luci-static/footstrap'
 uci -q set system.@system[0].hostname='AirPi-H5000M'
 uci -q set system.@system[0].zonename='Asia/Taipei'
 uci -q set system.@system[0].timezone='CST-8'
@@ -26,26 +26,6 @@ for radio in radio0 radio1; do
 		uci -q set "wireless.${radio}.country=US"
 	fi
 done
-
-
-
-
-# Force overwrite /etc/config/argon to ensure exactly ONE section exists.
-cat << 'EOF' > /etc/config/argon
-config global
-	option mode 'dark'
-	option primary '#0F766E'
-	option main_primary '#0F766E'
-	option dark_primary '#0F766E'
-	option blur '10'
-	option blur_dark '10'
-	option transparency '0.5'
-	option transparency_dark '0.5'
-	option bing '1'
-EOF
-
-
-
 
 
 # QModem is built into the firmware from its Git feed; it is not a hosted

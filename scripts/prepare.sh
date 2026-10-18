@@ -32,46 +32,39 @@ test -f package/feeds/qmodem/luci-app-qmodem-next/Makefile || {
 rm -rf package/mtk/applications/5g-modem
 
 
-# Clean up obsolete theme and config packages from feeds and package tree
+# Remove obsolete Argon theme and config package
 find feeds/luci feeds/packages -maxdepth 3 -type d \
   \( -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
   -prune -exec rm -rf {} + 2>/dev/null || true
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 
+# Fetch Footstrap source
+footstrap_tmp="$(mktemp -d)"
+if ! git clone --depth 1 \
+  https://github.com/VizzleTF/luci-theme-footstrap.git "$footstrap_tmp"; then
+  rm -rf "$footstrap_tmp"
+  exit 1
+fi
 
-# Fetch openwrt-24.10 repo containing both theme and config subdirectories
-argon_tmp="$(mktemp -d)"
-git clone -b openwrt-24.10 --depth 1 https://github.com/sbwml/luci-theme-argon.git "$argon_tmp"
-mv "$argon_tmp/luci-theme-argon" package/luci-theme-argon
-mv "$argon_tmp/luci-app-argon-config" package/luci-app-argon-config
-rm -rf "$argon_tmp"
+if [ ! -f "$footstrap_tmp/luci-theme-footstrap/Makefile" ]; then
+  echo 'Footstrap package Makefile not found; inspect upstream repository layout.' >&2
+  find "$footstrap_tmp" -maxdepth 3 -name Makefile -print
+  rm -rf "$footstrap_tmp"
+  exit 1
+fi
 
+rm -rf package/luci-theme-footstrap
+mv "$footstrap_tmp/luci-theme-footstrap" package/luci-theme-footstrap
+rm -rf "$footstrap_tmp"
 
-# The upstream supports both APK and IPK.
-sed -i 's/^LUCI_DEPENDS:=.*/LUCI_DEPENDS:=+wget +jsonfilter/' \
-  package/luci-theme-argon/Makefile
-
-
-# Validate argon-config package
-argon_config_makefile='package/luci-app-argon-config/Makefile'
-test -f "$argon_config_makefile"
-argon_config_version="$(sed -n 's/^PKG_VERSION:=//p' \
-  "$argon_config_makefile" | head -n 1)"
-test -n "$argon_config_version"
-case "$argon_config_version" in
-  0.9*)
-    echo "Obsolete luci-app-argon-config was selected: $argon_config_version" >&2
-    exit 1
-    ;;
-esac
-
+test -f package/luci-theme-footstrap/Makefile
 
 # 2. 建立 files 檔案結構並複製 overlay 腳本
 mkdir -p files/etc/uci-defaults
 if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
     cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
 fi
-chmod -R +x files/etc/uci-defaults/
+chmod +x files/etc/uci-defaults/99-h5000m-zh-tw
 
 
 curl -sSL "https://raw.githubusercontent.com/padavanonly/immortalwrt-mt798x-6.6/mt798x-mt799x-6.6-mtwifi/defconfig/mt7987_mt7992.config" > .config
@@ -91,6 +84,7 @@ for required in \
   'CONFIG_PACKAGE_kmod-mt_hwifi=y' \
   'CONFIG_PACKAGE_kmod-mt_wifi7=y' \
   'CONFIG_PACKAGE_luci-ssl-openssl=y' \
+  'CONFIG_PACKAGE_luci-theme-footstrap=y' \
   'CONFIG_WARP_VERSION="3_1"'; do
   grep -Fqx "$required" .config || {
     echo "Required build setting is missing: $required" >&2
@@ -124,8 +118,7 @@ if grep -Eq '^[[:space:]]*src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.co
   echo 'QModem source feed remained in feeds.conf after sanitizing.' >&2
   exit 1
 fi
-printf 'Argon theme source: sbwml/luci-theme-argon\nArgon config: %s (sbwml source, built as IPK; 0.9.x rejected)\n' \
-  "$argon_config_version" > .argon-buildinfo
+printf 'Theme: luci-theme-footstrap\nSource: VizzleTF/luci-theme-footstrap\n' > .footstrap-buildinfo
 
 
 echo 'Build configuration is ready.'
