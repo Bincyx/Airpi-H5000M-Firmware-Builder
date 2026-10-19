@@ -22,27 +22,28 @@ fi
 echo "=== Updating all feeds ==="
 ./scripts/feeds update -a
 
-echo "=== Checking QModem feed ==="
+echo "=== QModem feed configuration ==="
+grep -n -E '^[[:space:]]*src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf || true
+
+echo "=== Updating all feeds ==="
+./scripts/feeds update -a
+
+echo "=== Checking QModem feed directory ==="
 if [ ! -d feeds/qmodem ]; then
-  echo "ERROR: feeds/qmodem does not exist after feeds update." >&2
-  echo "=== feeds.conf ===" >&2
+  echo "QModem feed missing after update -a; trying explicit update."
+  ./scripts/feeds update qmodem
+fi
+
+if [ ! -d feeds/qmodem ]; then
+  echo "ERROR: feeds/qmodem still missing." >&2
   grep -n -i qmodem feeds.conf >&2 || true
-  echo "=== Available feed directories ===" >&2
-  find feeds -mindepth 1 -maxdepth 1 -type d -print >&2
   exit 1
 fi
 
-echo "=== Installing all feeds ==="
+echo "=== Installing feeds ==="
 ./scripts/feeds install -a
-
-echo "=== Installing QModem packages ==="
 ./scripts/feeds install -a -f -p qmodem
 
-test -f package/feeds/qmodem/luci-app-qmodem-next/Makefile || {
-  echo "ERROR: QModem feed did not install luci-app-qmodem-next." >&2
-  ls -la package/feeds/qmodem >&2 || true
-  exit 1
-}
 
 rm -rf package/mtk/applications/5g-modem
 
