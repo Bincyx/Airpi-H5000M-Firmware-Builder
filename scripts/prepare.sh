@@ -16,7 +16,7 @@ rm -f .config
 # Keep feeds.conf.default untouched so its Git URL cannot leak into firmware.
 test -f feeds.conf || cp feeds.conf.default feeds.conf
 if ! grep -Eq '^src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf; then
-  printf '%s\n' 'src-git qmodem https://github.com/FUjr/QModem.git;main' >> feeds.conf
+  printf '%s\n' 'src-git qmodem https://github.com/FUjr/QModem.git;5cc80e5f9fc218cd50bef9749dc7d0027e8b3072' >> feeds.conf
 fi
 
 
