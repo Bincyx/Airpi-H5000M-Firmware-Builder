@@ -1,70 +1,125 @@
+
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
 
 workspace="$(cd "${1:?source directory is required}" && pwd)"
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-
 cd "$workspace"
-
 
 rm -f .config
 
+# ============================================================
+# QModem: pin source commit, update feed, install packages
+# ============================================================
 
 # QModem is a build-time source feed, not a runtime OPKG/APK repository.
-# Keep feeds.conf.default untouched so its Git URL cannot leak into firmware.
+# Keep feeds.conf.default untouched.
 test -f feeds.conf || cp feeds.conf.default feeds.conf
-if ! grep -Eq '^src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf; then
-  printf '%s\n' 'src-git qmodem https://github.com/FUjr/QModem.git;5cc80e5f9fc218cd50bef9749dc7d0027e8b3072' >> feeds.conf
-fi
+
+QMODEM_URL='https://github.com/FUjr/QModem.git'
+QMODEM_COMMIT='5cc80e5f9fc218cd50bef9749dc7d0027e8b3072'
+
+echo "=== Configuring pinned QModem feed ==="
+
+# Remove any existing QModem feed entry to avoid stale configuration.
+sed -i -E \
+  '/^[[:space:]]*src-git(-full)?[[:space:]]+qmodem[[:space:]]+/d' \
+  feeds.conf
+
+# OpenWrt feed syntax: ^commit_hash pins an exact Git commit.
+printf '%s\n' \
+  "src-git qmodem ${QMODEM_URL}^${QMODEM_COMMIT}" >> feeds.conf
+
+grep -n -E \
+  '^[[:space:]]*src-git(-full)?[[:space:]]+qmodem[[:space:]]' \
+  feeds.conf
 
 echo "=== Updating all feeds ==="
 ./scripts/feeds update -a
 
-echo "=== QModem feed configuration ==="
-grep -n -E '^[[:space:]]*src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf || true
-
-echo "=== Updating all feeds ==="
-./scripts/feeds update -a
-
-echo "=== Checking QModem feed directory ==="
-if [ ! -d feeds/qmodem ]; then
-  echo "QModem feed missing after update -a; trying explicit update."
-  ./scripts/feeds update qmodem
-fi
-
-if [ ! -d feeds/qmodem ]; then
-  echo "ERROR: feeds/qmodem still missing." >&2
-  grep -n -i qmodem feeds.conf >&2 || true
+echo "=== Verifying QModem feed directory ==="
+if [ ! -d feeds/qmodem/.git ]; then
+  echo "ERROR: QModem feed was not cloned successfully." >&2
+  ls -la feeds  >&2 || true
   exit 1
 fi
 
-echo "=== Installing feeds ==="
+echo "=== Verifying checked-out QModem commit ==="
+actual_commit="$(git -C feeds/qmodem rev-parse HEAD)"
+if [ "$actual_commit" != "$QMODEM_COMMIT" ]; then
+  echo "ERROR: QModem commit mismatch." >&2
+  echo "Expected: $QMODEM_COMMIT" >&2
+  echo "Actual:   $actual_commit" >&2
+  exit 1
+fi
+
+echo "QModem commit verified: $actual_commit"
+
+echo "=== Installing all feeds ==="
 ./scripts/feeds install -a
+
+echo "=== Installing QModem packages ==="
 ./scripts/feeds install -a -f -p qmodem
 
+echo "=== Verifying QModem package ==="
+if [ ! -f package/feeds/qmodem/luci-app-qmodem-next/Makefile ]; then
+  echo "ERROR: luci-app-qmodem-next was not installed." >&2
+  ls -la package/feeds/qmodem >&2 || true
+  exit 1
+fi
+
+echo "QModem package installed successfully."
+
+# Remove the source-feed entry after package links have been installed.
+# This prevents the QModem build-time feed from being treated as a
+# runtime binary package repository.
+sed -i -E \
+  '/^[[:space:]]*src-git(-full)?[[:space:]]+qmodem[[:space:]]+/d' \
+  feeds.conf
+
+if grep -Eq \
+  '^[[:space:]]*src-git(-full)?[[:space:]]+qmodem[[:space:]]' \
+  feeds.conf; then
+  echo "ERROR: QModem source feed remained in feeds.conf." >&2
+  exit 1
+fi
+
+echo "QModem feed setup completed."
+
+# ============================================================
+# Remove the vendor modem package
+# ============================================================
 
 rm -rf package/mtk/applications/5g-modem
 
+# ============================================================
+# Replace Argon with Footstrap
+# ============================================================
 
-# Remove obsolete Argon theme and config package
+echo "=== Removing Argon theme packages ==="
+
 find feeds/luci feeds/packages -maxdepth 3 -type d \
   \( -name 'luci-theme-argon' -o -name 'luci-app-argon-config' \) \
   -prune -exec rm -rf {} + 2>/dev/null || true
+
 rm -rf package/luci-theme-argon package/luci-app-argon-config
 
-# Fetch Footstrap source
+echo "=== Fetching Footstrap source ==="
+
 footstrap_tmp="$(mktemp -d)"
+
 if ! git clone --depth 1 \
-  https://github.com/VizzleTF/luci-theme-footstrap.git "$footstrap_tmp"; then
+  https://github.com/VizzleTF/luci-theme-footstrap.git \
+  "$footstrap_tmp"; then
   rm -rf "$footstrap_tmp"
+  echo "ERROR: Failed to clone Footstrap." >&2
   exit 1
 fi
 
 if [ ! -f "$footstrap_tmp/luci-theme-footstrap/Makefile" ]; then
-  echo 'Footstrap package Makefile not found; inspect upstream repository layout.' >&2
-  find "$footstrap_tmp" -maxdepth 3 -name Makefile -print
+  echo "ERROR: Footstrap package Makefile not found." >&2
+  find "$footstrap_tmp" -maxdepth 4 -name Makefile -print >&2 || true
   rm -rf "$footstrap_tmp"
   exit 1
 fi
@@ -75,20 +130,50 @@ rm -rf "$footstrap_tmp"
 
 test -f package/luci-theme-footstrap/Makefile
 
-# 2. 建立 files 檔案結構並複製 overlay 腳本
-mkdir -p files/etc/uci-defaults
-if [ -f "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" ]; then
-    cp -a "$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw" files/etc/uci-defaults/
+echo "Footstrap source installed."
+
+# ============================================================
+# Install H5000M overlay script
+# ============================================================
+
+echo "=== Installing H5000M overlay script ==="
+
+overlay_script="$project_root/overlay/etc/uci-defaults/99-h5000m-zh-tw"
+
+if [ ! -f "$overlay_script" ]; then
+  echo "ERROR: H5000M overlay script not found: $overlay_script" >&2
+  exit 1
 fi
+
+mkdir -p files/etc/uci-defaults
+cp -a "$overlay_script" files/etc/uci-defaults/
 chmod +x files/etc/uci-defaults/99-h5000m-zh-tw
 
+# ============================================================
+# Load upstream defconfig and H5000M configuration
+# ============================================================
 
-curl -sSL "https://raw.githubusercontent.com/padavanonly/immortalwrt-mt798x-6.6/mt798x-mt799x-6.6-mtwifi/defconfig/mt7987_mt7992.config" > .config
+echo "=== Downloading upstream defconfig ==="
+
+curl -fsSL \
+  "https://raw.githubusercontent.com/padavanonly/immortalwrt-mt798x-6.6/mt798x-mt799x-6.6-mtwifi/defconfig/mt7987_mt7992.config" \
+  -o .config
+
+if [ ! -s .config ]; then
+  echo "ERROR: Upstream defconfig is missing or empty." >&2
+  exit 1
+fi
+
 cat "$project_root/config/h5000m.config" >> .config
 
-
+echo "=== Running make defconfig ==="
 make defconfig
 
+# ============================================================
+# Verify required build settings
+# ============================================================
+
+echo "=== Checking required build settings ==="
 
 for required in \
   'CONFIG_PACKAGE_luci-app-qmodem-next=y' \
@@ -102,12 +187,18 @@ for required in \
   'CONFIG_PACKAGE_luci-ssl-openssl=y' \
   'CONFIG_PACKAGE_luci-theme-footstrap=y' \
   'CONFIG_WARP_VERSION="3_1"'; do
-  grep -Fqx "$required" .config || {
-    echo "Required build setting is missing: $required" >&2
+
+  if ! grep -Fqx "$required" .config; then
+    echo "ERROR: Required build setting is missing: $required" >&2
     exit 1
-  }
+  fi
 done
 
+# ============================================================
+# Verify forbidden/conflicting build settings
+# ============================================================
+
+echo "=== Checking conflicting build settings ==="
 
 for forbidden in \
   'CONFIG_PACKAGE_luci-app-modem=y' \
@@ -118,23 +209,18 @@ for forbidden in \
   'CONFIG_PACKAGE_luci-app-qmodem-hc=y' \
   'CONFIG_PACKAGE_libustream-mbedtls=y' \
   'CONFIG_PACKAGE_libustream-mbedtls20201210=y'; do
+
   if grep -Fqx "$forbidden" .config; then
-    echo "Conflicting build setting was selected: $forbidden" >&2
+    echo "ERROR: Conflicting build setting was selected: $forbidden" >&2
     exit 1
   fi
 done
 
+# ============================================================
+# Record theme build information
+# ============================================================
 
+printf 'Theme: luci-theme-footstrap\nSource: VizzleTF/luci-theme-footstrap\n' \
+  > .footstrap-buildinfo
 
-# QModem packages are already linked under package/feeds/qmodem. Remove only
-# the source-feed entry before the firmware build so base-files cannot emit a
-# non-existent qmodem binary repository into /etc/opkg/distfeeds.conf.
-sed -i -E '/^[[:space:]]*src-git(-full)?[[:space:]]+qmodem[[:space:]]+/d' feeds.conf
-if grep -Eq '^[[:space:]]*src-git(-full)?[[:space:]]+qmodem[[:space:]]' feeds.conf; then
-  echo 'QModem source feed remained in feeds.conf after sanitizing.' >&2
-  exit 1
-fi
-printf 'Theme: luci-theme-footstrap\nSource: VizzleTF/luci-theme-footstrap\n' > .footstrap-buildinfo
-
-
-echo 'Build configuration is ready.'
+echo "Build configuration is ready."
