@@ -6,6 +6,15 @@ name: Build H5000M firmware
 on:
   workflow_dispatch:
     inputs:
+      enable_adguardhome:
+        description: 'Include AdGuard Home LuCI in firmware'
+        required: true
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+        default: 'false'
+
       clean_build:
         description: Ignore existing build cache
         required: false
@@ -117,7 +126,7 @@ jobs:
             h5000m-v2-${{ runner.os }}-${{ env.SOURCE_BRANCH }}-
 
       - name: Prepare firmware configuration
-        run: bash ./scripts/prepare.sh .work/source
+        run: ENABLE_ADGUARDHOME='${{ inputs.enable_adguardhome }}' bash ./scripts/prepare.sh .work/source
 
 
 

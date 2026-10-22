@@ -88,6 +88,105 @@ fi
 echo "QModem feed setup completed."
 
 # ============================================================
+# Optional AdGuard Home LuCI selection
+# Default: disabled
+# ============================================================
+ENABLE_ADGUARDHOME="${ENABLE_ADGUARDHOME:-}"
+
+if [ -z "$ENABLE_ADGUARDHOME" ]; then
+  if [ -t 0 ]; then
+    printf '\n'
+    printf '%s\n' 'Include AdGuard Home LuCI in this firmware?'
+    printf '%s\n' '  1) Enable'
+    printf '%s\n' '  0) Disable (default)'
+    read -r -p 'Select [0]: ' adguard_answer
+    case "$adguard_answer" in
+      1|y|Y|yes|YES|true|TRUE) ENABLE_ADGUARDHOME=1 ;;
+      *) ENABLE_ADGUARDHOME=0 ;;
+    esac
+  else
+    ENABLE_ADGUARDHOME=0
+  fi
+fi
+
+case "$ENABLE_ADGUARDHOME" in
+  1|true|TRUE|yes|YES) ENABLE_ADGUARDHOME=1 ;;
+  0|false|FALSE|no|NO) ENABLE_ADGUARDHOME=0 ;;
+  *)
+    echo "ERROR: ENABLE_ADGUARDHOME must be true/false or 1/0." >&2
+    exit 1
+    ;;
+esac
+
+echo "AdGuard Home enabled: $ENABLE_ADGUARDHOME"
+
+if [ "$ENABLE_ADGUARDHOME" = "1" ]; then
+
+  # ============================================================
+  # AdGuard Home LuCI app: pinned source feed
+  # ============================================================
+
+  ADGUARDHOME_URL='https://github.com/w9315273/luci-app-adguardhome.git'
+  ADGUARDHOME_COMMIT='27853f3e1a831c9fd0380c166f68c7e0e0b9736f'
+
+  echo "=== Configuring pinned AdGuard Home LuCI feed ==="
+
+  test -f feeds.conf || cp feeds.conf.default feeds.conf
+
+  sed -i -E \
+    '/^[[:space:]]*src-git(-full)?[[:space:]]+adguardhome[[:space:]]+/d' \
+    feeds.conf
+
+  printf '%s\n' \
+    "src-git adguardhome ${ADGUARDHOME_URL}^${ADGUARDHOME_COMMIT}" >> feeds.conf
+
+  ./scripts/feeds update adguardhome
+
+  if [ ! -d feeds/adguardhome/.git ]; then
+    echo "ERROR: AdGuard Home feed was not cloned." >&2
+    ls -la feeds >&2 || true
+    exit 1
+  fi
+
+  actual_adguardhome_commit="$(git -C feeds/adguardhome rev-parse HEAD)"
+  if [ "$actual_adguardhome_commit" != "$ADGUARDHOME_COMMIT" ]; then
+    echo "ERROR: AdGuard Home commit mismatch." >&2
+    echo "Expected: $ADGUARDHOME_COMMIT" >&2
+    echo "Actual:   $actual_adguardhome_commit" >&2
+    exit 1
+  fi
+
+  echo "AdGuard Home commit verified: $actual_adguardhome_commit"
+
+  ./scripts/feeds install -a -f -p adguardhome
+
+  if [ ! -f package/feeds/adguardhome/luci-app-adguardhome/Makefile ]; then
+    echo "ERROR: luci-app-adguardhome Makefile was not installed." >&2
+    find package/feeds/adguardhome -maxdepth 3 -name Makefile -print >&2 2>/dev/null || true
+    exit 1
+  fi
+
+  echo "AdGuard Home LuCI package installed successfully."
+
+  # 安裝完成後移除暫時的來源 feed 設定
+  sed -i -E \
+    '/^[[:space:]]*src-git(-full)?[[:space:]]+adguardhome[[:space:]]+/d' \
+    feeds.conf
+
+  if grep -Eq \
+    '^[[:space:]]*src-git(-full)?[[:space:]]+adguardhome[[:space:]]' \
+    feeds.conf; then
+    echo "ERROR: AdGuard Home feed entry was not removed." >&2
+    exit 1
+  fi
+
+  echo "AdGuard Home feed setup completed."
+
+else
+  echo "AdGuard Home disabled; skipping its feed and package installation."
+fi
+
+# ============================================================
 # Remove the vendor modem package
 # ============================================================
 
@@ -167,6 +266,9 @@ fi
 cat "$project_root/config/h5000m.config" >> .config
 
 echo "=== Running make defconfig ==="
+if [ "$ENABLE_ADGUARDHOME" = "1" ]; then
+  printf '%s\n' 'CONFIG_PACKAGE_luci-app-adguardhome=y' >> .config
+fi
 make defconfig
 
 # ============================================================
