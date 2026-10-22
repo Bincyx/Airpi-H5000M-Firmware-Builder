@@ -158,22 +158,22 @@ if [ "$ENABLE_ADGUARDHOME" = "1" ]; then
 
   echo "AdGuard Home commit verified: $actual_adguardhome_commit"
 
-  # Install this single-package repository without relying on feed indexes.
-  ADGUARDHOME_PACKAGE="feeds/adguardhome/luci-app-adguardhome"
+  # Register the repository root as the package source.
+  ADGUARDHOME_PACKAGE="feeds/adguardhome"
 
   if [ ! -f "$ADGUARDHOME_PACKAGE/Makefile" ]; then
-    echo "ERROR: AdGuard Home package Makefile is missing from the pinned source." >&2
-    find feeds/adguardhome -maxdepth 4 -name Makefile -print >&2 2>/dev/null || true
+    echo "ERROR: AdGuard Home root Makefile is missing." >&2
+    find feeds/adguardhome -maxdepth 3 -name Makefile -print >&2 2>/dev/null || true
     exit 1
   fi
 
   mkdir -p package/feeds/adguardhome
 
-  ln -sfn ../../../feeds/adguardhome/luci-app-adguardhome \
+  ln -sfn ../../../feeds/adguardhome \
     package/feeds/adguardhome/luci-app-adguardhome
 
   if [ ! -f package/feeds/adguardhome/luci-app-adguardhome/Makefile ]; then
-    echo "ERROR: Failed to link luci-app-adguardhome into package/feeds." >&2
+    echo "ERROR: Failed to link AdGuard Home root Makefile." >&2
     exit 1
   fi
 
